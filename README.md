@@ -24,9 +24,10 @@ Single-user personal app. One place for everything outside work.
 ## Stack
 
 Next.js (App Router) · TypeScript · SQLite + Drizzle · Tailwind · shadcn/ui ·
-installable PWA.
+installable PWA. Self-hosted on a Hostinger VPS, reached over Tailscale (D-15).
 
-Nothing is scaffolded yet. `KICKOFF.md` starts that.
+Nothing is scaffolded yet. `KICKOFF.md` started the design; session 1 is done
+(see `state/threads.md`). Build begins at "git init + `state/` layout".
 
 ## What survives from Phase 1
 
@@ -52,4 +53,6 @@ python3 bin/build_ics.py
 - **D-08** — no desk content in this repo or database, ever
 - **D-10** — no module imports another module
 - **D-12** — Google Calendar owns alerting; the app only exports `.ics`
+- **D-15** — prod on the VPS, tailnet-only; dev on localhost
+- **D-16** — agents (future) stay out-of-process behind a capability interface
 - Migrations are generated, never hand-edited

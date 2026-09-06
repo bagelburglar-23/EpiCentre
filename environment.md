@@ -12,7 +12,25 @@
 | Styling | Tailwind |
 | Components | shadcn/ui — copied into the repo, not a dependency |
 | Delivery | PWA, installable to home screen |
+| Hosting | Hostinger KVM 2 VPS — prod instance as a `systemd` service (D-15) |
+| Ingress | Tailscale `tailscale serve` — real HTTPS, tailnet-only, no public ports |
 | Editor | VS Code + Claude Code extension |
+
+Node on the VPS: NodeSource apt repo, LTS. `better-sqlite3` compiles a native
+binary at `npm ci` — needs `build-essential` + `python3` (present).
+
+## VPS
+
+| item | detail |
+|---|---|
+| Plan | Hostinger KVM 2 — 2 vCPU, 7.8 GB RAM, 96 GB NVMe, 8 TB bandwidth |
+| OS | Ubuntu 24.04.4 LTS, systemd 255, full root |
+| Location | Kuala Lumpur (UTC+8, no DST — matches the ledger's alert timezone) |
+| Hostname | `srv1648855.hstgr.cloud` (public); a `*.ts.net` name once Tailscale is up |
+| Backups | Hostinger weekly VM backup + 1 snapshot slot; plus a nightly `sqlite3 .backup` cron |
+| Docker | installed and kept — reserved for future agent workers (D-16), not for the app |
+| Firewall | `ufw` — inbound SSH only; 80/443 stay closed (Tailscale needs neither) |
+| History | shipped with a Hostinger one-click "openclaw" agent stack; removed before Phase A |
 
 ## Legacy — still works
 

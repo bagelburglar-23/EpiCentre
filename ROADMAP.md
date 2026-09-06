@@ -10,20 +10,28 @@ condition you can't argue with.
 ## Phase A — Shell + Ledger
 
 **Exit condition: the ledger works on your phone, installed to the home
-screen, with your real dates in it.**
+screen, served from the VPS, with your real dates in it.**
 
 - Next.js + TS + Tailwind + shadcn/ui scaffold
-- SQLite + Drizzle, migrations working
-- Password gate
+- VPS baseline: Node (NodeSource), `build-essential`, non-root deploy user,
+  `ufw`, kernel update + reboot
+- Deployed to the VPS as a `systemd` service, reachable over Tailscale with a
+  real HTTPS cert (D-15)
+- Password gate (`jose` cookie, `getPrincipal()`) — **before** the box holds
+  real data, not last
+- SQLite + Drizzle, migrations working (glob schema, D-17)
+- Nightly `sqlite3 .backup` cron on the VPS
 - Shell: nav, dashboard, module registry
-- `modules/ledger`: CRUD, list, `.ics` export
-- Seed from `state/ledger.md`
-- PWA manifest + service worker
+- `modules/ledger`: CRUD, list, `.ics` export (via `lib/ics.ts`)
+- Seed from `state/ledger.md` (reuses the mutation core)
+- PWA manifest + minimal service worker
 
-Not in Phase A: any second module, offline writes, hosting, theming, charts.
+Not in Phase A: any second module, offline writes, theming, charts, **any
+agent code** (the *design* accommodates agents per D-16; no agent is built).
 
-**Estimated 30–40 h. At 4 h/week that is 8–10 weeks.** Most of it is the
-learning curve, not the code. Expect the first two weekends to feel slow.
+**Estimated 40–50 h. At 4 h/week that is ~11–13 weeks.** The VPS adds ~6–10 h
+of mostly one-time infrastructure. Most of the rest is the learning curve, not
+the code. Expect the first two weekends to feel slow.
 
 ## Phase B — Second module
 
@@ -52,6 +60,17 @@ items die here, which is the point.
 One module at a time. Any backlog item that survived the month is a candidate.
 
 **WIP cap: one module in progress at a time.** Not two.
+
+## Later — Agents (D-16)
+
+The endgoal: EpiCentre as a self-built agent host running on the same VPS.
+Not a phase yet, and deliberately not scheduled — it does not begin until at
+least two modules exist and the module contract has been tested (Phase B).
+The Phase A build only guarantees the *integration surface* is not foreclosed:
+a mutation core agents can call, a manifest slot for `agentCapabilities`, an
+auth function that grows a token branch, Docker left installed. Everything
+else — the agent route, tokens, task model, workers — is in `BACKLOG.md` and
+the semantics are in `decisions.md` "Open".
 
 ## Scope discipline during a phase
 

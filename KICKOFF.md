@@ -53,3 +53,22 @@ Then stop and wait. Don't start scaffolding until I've responded.
 
 Later sessions need no prompt — `CLAUDE.md` and `state/threads.md` carry the
 context. Just open the folder and say what you're working on.
+
+## Session 1 outcome — 2026-09-06
+
+Done. No code written (as intended). Results:
+
+- **Module contract** restated and confirmed.
+- **`ARCHITECTURE.md` critique** (problems P1–P10) folded into the specs —
+  notably: the manifest is split client-safe / server-only; `lib/schema.ts` is
+  dropped for a drizzle glob (D-17); actions get a mutation-core + form-adapter
+  split; `lib/` gets an admission rule; middleware auth uses `jose`.
+- **VPS adopted** — Hostinger KVM 2, Tailscale ingress, prod as a `systemd`
+  service (D-15). This closed the "hosting" open question early.
+- **Agent integration** is now a standing design constraint (D-16). Phase A
+  builds no agent code; it only keeps the door open.
+- Build order set (11 steps) — see `state/threads.md` T-03.
+- `git init` done. VPS "openclaw" one-click stack identified for removal — see
+  T-04.
+
+Resume from `state/threads.md`.

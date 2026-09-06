@@ -6,17 +6,21 @@ complete.
 ---
 
 ## WS-5 — EpiCentre
-**Status:** Phase A, not started · **Type:** Personal infrastructure
+**Status:** Phase A — design done (session 1, 2026-09-06), build not started ·
+**Type:** Personal infrastructure
 
-Single-user PWA. One place for everything outside work.
+Single-user PWA. One place for everything outside work. Self-hosted on a
+Hostinger VPS, reached over Tailscale (D-15). Long-run endgoal: a self-built
+agent host on the same VPS (D-16).
 
 | phase | description | status |
 |---|---|---|
 | 0 | Markdown state store + Python scripts | **done, superseded** |
-| A | Shell + ledger module, installed on phone | **current** |
+| A | Shell + ledger module, deployed to the VPS, installed on phone | **current — building** |
 | B | Second module — tests the module contract | not started |
 | gate | One month of use, no new modules | not started |
 | C | Expand, one module at a time | not started |
+| later | Agents on the VPS (D-16) — not a phase yet, not scheduled | design-reserved only |
 
 Exit conditions in `ROADMAP.md`.
 
