@@ -14,8 +14,8 @@ apt update && apt upgrade -y && reboot
 Reconnect, then paste this whole block:
 
 ```bash
-# Node 22 LTS + build tools
-curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+# Node 24 LTS + build tools (match the laptop's version)
+curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
 apt install -y nodejs build-essential
 
 # system account that only runs the app (no login, no home dir)

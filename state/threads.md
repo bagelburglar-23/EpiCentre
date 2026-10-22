@@ -89,7 +89,7 @@ Box confirmed: KVM, Ubuntu 24.04.4, root, systemd, 2 vCPU / 8 GB / 96 GB.
 80/443 free, 1.4 GB reclaimed, Docker itself kept for future agent workers.
 
 **Remaining, all in `DEPLOY.md`'s one consolidated script:** `apt upgrade` +
-reboot (pending kernel update was still outstanding last check) → Node 22 +
+reboot (pending kernel update was still outstanding last check) → Node 24 +
 `build-essential` → the `deploy` system account → the bare repo + hook →
 the `systemd` unit → `ufw` → Tailscale install + `tailscale up` (needs a
 browser approval click) → `tailscale serve --bg 3000` once something is
