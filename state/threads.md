@@ -33,53 +33,67 @@ Roughly 20–40 entries is normal. Partial dates are fine (`????-MM-DD`).
 
 ---
 
-## T-03 — Phase A: design done, build not started
-**Status:** open · **Next action:** build step 0 — `git init` (done),
-`state/` layout, `.nvmrc`, then step 1 (`create-next-app`)
+## T-03 — Phase A: build in progress (started 2026-10-22)
+**Status:** open · **Next action:** finish the Next.js scaffold once Node
+finishes installing on the laptop (blocked on a Windows admin-permission
+prompt as of this session), then push to the VPS.
 
-Session 1 (2026-09-06) is complete. Outcomes:
+Session 1 (2026-09-06): design only, no code. Outcomes: module contract
+confirmed; `ARCHITECTURE.md` critique (P1–P10) folded in; VPS adopted (D-15);
+agent integration made a standing constraint (D-16); drop `lib/schema.ts` for
+a drizzle glob (D-17); `git init` done.
 
-- Module contract restated and confirmed.
-- `ARCHITECTURE.md` critique done — problems P1–P10. All folded into the specs.
-- **VPS adopted** (D-15): Hostinger KVM 2, reached over Tailscale, prod as a
-  `systemd` service. Dev stays on localhost.
-- **Agent integration** made a standing constraint (D-16); Phase A builds no
-  agent code, only avoids foreclosing it via three cheap habits (mutation
-  core + adapter, idempotent keys, one `getPrincipal()`).
-- Forks resolved: drop `lib/schema.ts` for a drizzle glob (D-17); build the
-  ledger flat then refactor into `modules/` at build step 10; keep all six
-  agent accommodations (A1–A6).
-- `git init` done (branch `main`), baseline + LF-normalization commits.
+Session 2 (2026-10-22): asked for the fastest path to "hub running 24/7,
+installable on desktop Chrome + iPhone." Re-scoped the deploy mechanism for
+speed — **no GitHub, no separate `deploy.sh`, no non-root push user.** A bare
+repo on the VPS (`/opt/epicentre.git`) with a `post-receive` hook
+(`deploy/post-receive`) builds and restarts on every `git push vps main`; the
+VPS's own `deploy` account is a no-login system account that only *runs* the
+service (`ARCHITECTURE.md` "Hosting & deploy" updated to match; the push
+itself still runs as root — flagged as a known shortcut in `DEPLOY.md`, not
+hardened yet). Progress this session:
 
-**Build order** (smallest shippable first): 0 git/layout · 1 create-next-app
-on laptop · 2 provision VPS + deploy bare app + PWA manifest + install on
-phone · 3 auth gate · 4 SQLite+Drizzle, one table · 5 add+list · 6
-edit+delete · 7 seed from `state/ledger.md` · 8 nightly backup cron · 9
-`lib/ics.ts` + `.ics` export → Google Calendar · 10 refactor into
-`modules/ledger/` + registry + dashboard + extract `_template` · 11 deploy
-script + `DEPLOY.md`.
+- `state/` + `bin/` move done (resolves the path drift noted in session 1).
+- `deploy/epicentre.service`, `deploy/post-receive`, `DEPLOY.md` written.
+- Node.js LTS install kicked off via `winget` — **stalled on a Windows UAC
+  prompt** that needs a manual click (the tool can't answer a GUI dialog).
+  Check `node -v` on the laptop; if still missing, the winget install is
+  sitting at an elevation prompt — click it, or run
+  `winget install --id OpenJS.NodeJS.LTS -e` by hand.
 
-**Not yet done:** the `state/` directory move. The five human-maintained
-markdown files (`decisions.md`, `preferences.md`, `threads.md`,
-`workstreams.md`, `ledger.md`) still sit at repo root; specs and
-`build_ics.py --ledger` default assume `state/`. Do this at build step 0.
+**Once Node is confirmed:** scaffold Next.js in place (same approach as
+before — set `.gitignore`/`.gitattributes`/`README.md` aside, run
+`create-next-app@latest .`, restore them), add a minimal shell page + PWA
+manifest, commit.
+
+**Build order** (smallest shippable first, condensed for speed): 0 repo
+layout (done) · 1 create-next-app + minimal shell + manifest (in progress) ·
+2 VPS one-time setup (`DEPLOY.md`) + first `git push vps main` + `tailscale
+serve --bg 3000` + install on phone/desktop · 3 auth gate · 4 SQLite+Drizzle ·
+5 add+list · 6 edit+delete · 7 seed from `state/ledger.md` · 8 nightly backup
+cron · 9 `.ics` export → Google Calendar · 10 refactor into `modules/ledger/`
++ registry + dashboard + extract `_template`.
+
+**Not yet done, explicitly deferred past today's "live" milestone:** the
+password gate (D-11/D-13 — box is tailnet-only and holds no data yet, so
+this is acceptable for a few days but not longer), nightly backup cron (no
+DB yet either).
 
 ---
 
 ## T-04 — VPS baseline
-**Status:** open · **Blocks:** build step 2 (first deploy)
+**Status:** mostly done · **Blocks:** nothing currently
 
 Box confirmed: KVM, Ubuntu 24.04.4, root, systemd, 2 vCPU / 8 GB / 96 GB.
+**openclaw + Traefik removed and verified** (2026-09-06 session) — ports
+80/443 free, 1.4 GB reclaimed, Docker itself kept for future agent workers.
 
-**Done:** identified and (pending Lucas running the paste) removed the
-Hostinger "openclaw" one-click stack (openclaw + Traefik containers that held
-80/443). Docker itself stays for future agent workers.
-
-**Next steps, in order:** run the openclaw-removal paste → reboot (pending
-kernel update) → `apt update && apt upgrade` → install Node (NodeSource LTS) +
-`build-essential` → create a non-root deploy user → `ufw` allow SSH, enable →
-install Tailscale on VPS + phone (+ laptop), `tailscale up`, enable MagicDNS +
-HTTPS certs in the admin console.
+**Remaining, all in `DEPLOY.md`'s one consolidated script:** `apt upgrade` +
+reboot (pending kernel update was still outstanding last check) → Node 22 +
+`build-essential` → the `deploy` system account → the bare repo + hook →
+the `systemd` unit → `ufw` → Tailscale install + `tailscale up` (needs a
+browser approval click) → `tailscale serve --bg 3000` once something is
+listening on port 3000.
 
 ---
 

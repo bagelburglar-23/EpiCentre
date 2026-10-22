@@ -1,0 +1,15 @@
+[Unit]
+Description=EpiCentre
+After=network.target
+
+[Service]
+Type=simple
+User=deploy
+WorkingDirectory=/opt/epicentre
+EnvironmentFile=-/etc/epicentre.env
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

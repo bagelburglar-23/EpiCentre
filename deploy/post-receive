@@ -1,0 +1,19 @@
+#!/bin/bash
+# Installed at /opt/epicentre.git/hooks/post-receive on the VPS.
+# Runs on the VPS, as whoever pushes (root, over SSH), every time you
+# `git push vps main` from the laptop. Output streams back to that push.
+set -e
+
+WORK=/opt/epicentre
+
+export GIT_WORK_TREE=$WORK
+git checkout -f main
+unset GIT_WORK_TREE
+
+cd "$WORK"
+npm ci
+npm run build
+chown -R deploy:deploy "$WORK"
+systemctl restart epicentre
+
+echo "Deployed $(git rev-parse --short HEAD)"

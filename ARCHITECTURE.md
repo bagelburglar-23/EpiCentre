@@ -52,7 +52,7 @@ modules/
     actions.ts              mutation core + "use server" adapters
     ui/                     components
 drizzle/                    generated migrations — never hand-edit
-deploy/                      systemd unit + deploy.sh (see "Hosting & deploy")
+deploy/                      systemd unit + post-receive hook (see "Hosting & deploy")
 ```
 
 ## The module contract
@@ -236,9 +236,13 @@ Code moves dev → prod through **git**. Data does not move — the seed
 - **`tailscale serve https / http://127.0.0.1:3000`** terminates HTTPS on the
   VPS's tailnet hostname (real cert, auto-renewed) and forwards to the local
   app. Ports 80/443 are **not** opened; `ufw` blocks all inbound except SSH.
-- **Deploy** is `deploy/deploy.sh`: `git pull && npm ci && npm run build &&
-  npx drizzle-kit migrate && sudo systemctl restart epicentre`. One command.
-  Not CI — that's automation on push, and it's backlogged.
+- **Deploy** is `git push vps main`. A bare repo on the VPS
+  (`/opt/epicentre.git`) has a `post-receive` hook (`deploy/post-receive`)
+  that checks out, `npm ci`, builds, and restarts the `systemd` service —
+  its output streams back into the `git push` you ran. One command, and you
+  watch it finish. This is still a human choosing to push, not a scheduled
+  pull — see `decisions.md`/`threads.md` for why that distinction matters
+  once migrations are interactive. Auto-deploy-on-a-schedule stays backlogged.
 - Node is installed from the **NodeSource** apt repo (LTS). `better-sqlite3`
   compiles a native binary on `npm ci`; the VPS needs `build-essential` +
   `python3` (present).
