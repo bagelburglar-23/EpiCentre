@@ -50,3 +50,4 @@ node_modules/
 *.db-wal
 epicentre.ics
 .DS_Store
+.ci-keys/
