@@ -24,7 +24,7 @@ jobs:
         run: |
           gh pr list --head "${{ github.ref_name }}" --json number | grep -q number || \
           gh pr create --head "${{ github.ref_name }}" --base main \
-            --title "${{ github.ref_name }}" --body "Auto-opened preview PR. Preview: https://srv1648855.tail523e0b.ts.net/preview"
+            --title "${{ github.ref_name }}" --body "Auto-opened preview PR. Preview: https://srv1648855.tail523e0b.ts.net:8443/"
 
       - name: Deploy branch to UAT
         uses: appleboy/ssh-action@v1
