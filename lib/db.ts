@@ -40,6 +40,22 @@ export function getDb(): Database.Database {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
+  // Additive-only columns (see ARCHITECTURE.md / Step 1's PROD/UAT design
+  // on why: this table is on the shared database, so a destructive change
+  // here would break the other environment immediately, not just at merge
+  // time). `text` stays the DB column name for the title - only adding
+  // columns, never renaming one on a live shared table.
+  for (const stmt of [
+    `ALTER TABLE todos ADD COLUMN details TEXT`,
+    `ALTER TABLE todos ADD COLUMN due_date TEXT`,
+    `ALTER TABLE todos ADD COLUMN reminder_sent INTEGER NOT NULL DEFAULT 0`,
+  ]) {
+    try {
+      instance.exec(stmt);
+    } catch (e) {
+      if (!(e instanceof Error) || !e.message.includes("duplicate column")) throw e;
+    }
+  }
   return instance;
 }
 

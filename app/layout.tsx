@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import { getDeployedSha } from "@/lib/db";
 import "./globals.css";
 
@@ -18,13 +18,15 @@ async function resolveAccent(): Promise<"red" | "blue" | "grey"> {
   return "grey";
 }
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Sans for body text (dense, compact UI), mono for headers/labels/data -
+// the "electronic dashboard" feel this is going for.
+const sans = Inter({
+  variable: "--font-sans",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const mono = JetBrains_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
 });
 
@@ -54,9 +56,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       data-accent={accent}
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${sans.variable} ${mono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      <body className="min-h-full flex flex-col bg-background text-foreground font-sans text-[13px] leading-snug">
         {children}
       </body>
     </html>
