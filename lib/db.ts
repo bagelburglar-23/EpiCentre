@@ -13,7 +13,7 @@ import Database from "better-sqlite3";
 // read DATABASE_PATH) in the build environment instead of the server's.
 let instance: Database.Database | null = null;
 
-function getDb(): Database.Database {
+export function getDb(): Database.Database {
   if (instance) return instance;
   const path = process.env.DATABASE_PATH ?? "./epicentre.dev.db";
   instance = new Database(path);
@@ -25,7 +25,26 @@ function getDb(): Database.Database {
       deployed_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
+  // todos: the first real (non-smoke-test) module's table. is_test follows
+  // the standing convention from the PROD/UAT design - PROD never sees rows
+  // where is_test = 1; UAT sees everything. Not yet run through Drizzle/the
+  // full modules/ pattern - that formalization is still ahead; this is raw
+  // SQL on the same shared connection, kept deliberately simple for now.
+  instance.exec(`
+    CREATE TABLE IF NOT EXISTS todos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      text TEXT NOT NULL,
+      done INTEGER NOT NULL DEFAULT 0,
+      is_test INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
   return instance;
+}
+
+export function isProduction(): boolean {
+  return process.env.DEPLOY_ENV === "production";
 }
 
 // Writing deploy_state rows happens via scripts/record-deploy.mjs (run
