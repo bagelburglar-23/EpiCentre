@@ -1,0 +1,53 @@
+name: preview-deploy-on-branch-push
+
+on:
+  push:
+    branches: ["feature/**"]
+
+concurrency:
+  group: epicentre-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Open PR if one doesn't already exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr list --head "${{ github.ref_name }}" --json number | grep -q number || \
+          gh pr create --head "${{ github.ref_name }}" --base main \
+            --title "${{ github.ref_name }}" --body "Auto-opened preview PR. Preview: https://srv1648855.tail523e0b.ts.net/preview"
+
+      - name: Deploy branch to UAT
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: claude
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            export XDG_RUNTIME_DIR=/run/user/$(id -u)
+            if [ -d /home/claude/epicentre-preview/.git ]; then
+              cd /home/claude/epicentre-preview
+              git fetch origin "${{ github.ref_name }}"
+              git checkout "${{ github.ref_name }}"
+              git reset --hard "origin/${{ github.ref_name }}"
+            else
+              git clone -b "${{ github.ref_name }}" \
+                git@github.com:bagelburglar-23/EpiCentre.git /home/claude/epicentre-preview
+              cd /home/claude/epicentre-preview
+            fi
+            export DEPLOY_ENV=preview
+            export DATABASE_PATH=/home/claude/shared/epicentre.db
+            export NEXT_PUBLIC_COMMIT_SHA=$(git rev-parse HEAD)
+            npm ci
+            npm run build
+            node scripts/record-deploy.mjs preview "$NEXT_PUBLIC_COMMIT_SHA"
+            systemctl --user restart epicentre-preview

@@ -14,18 +14,20 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center bg-zinc-50 px-6 py-16 font-sans dark:bg-black">
+    <div className="flex min-h-screen flex-col items-center bg-background px-6 py-16 font-sans">
       <main className="w-full max-w-md">
-        <h1 className="mb-6 text-2xl font-semibold text-black dark:text-zinc-50">
+        <h1 className="mb-6 text-2xl font-semibold text-accent-bright">
           EpiCentre — smoke test
         </h1>
-        <p className="mb-6 text-sm text-zinc-500">
+        <p className="mb-6 text-sm text-foreground/60">
           Plain in-memory to-do list. Resets on page reload — this is only
           here to confirm edits deploy correctly, not a real feature yet.
+          Accent color above/below reflects PROD (red) vs UAT pending
+          review (blue) vs UAT in sync (grey).
         </p>
         <div className="mb-4 flex gap-2">
           <input
-            className="flex-1 rounded border border-zinc-300 bg-white px-3 py-2 text-black dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
+            className="flex-1 rounded border border-accent-dim bg-black px-3 py-2 text-foreground outline-none focus:border-accent"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addItem()}
@@ -33,7 +35,7 @@ export default function Home() {
           />
           <button
             onClick={addItem}
-            className="rounded bg-black px-4 py-2 text-white dark:bg-white dark:text-black"
+            className="rounded bg-accent px-4 py-2 font-medium text-black hover:bg-accent-bright"
           >
             Add
           </button>
@@ -42,13 +44,13 @@ export default function Home() {
           {items.map((item, i) => (
             <li
               key={i}
-              className="rounded border border-zinc-200 bg-white px-3 py-2 text-black dark:border-zinc-800 dark:bg-zinc-900 dark:text-white"
+              className="rounded border border-accent-dim bg-black px-3 py-2 text-foreground"
             >
               {item}
             </li>
           ))}
           {items.length === 0 && (
-            <li className="text-sm text-zinc-400">Nothing yet.</li>
+            <li className="text-sm text-foreground/40">Nothing yet.</li>
           )}
         </ul>
       </main>
