@@ -28,13 +28,23 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const isPreview = process.env.DEPLOY_ENV === "preview";
+const appName = isPreview ? "EpiCentre UAT" : "EpiCentre";
+const icon192 = isPreview ? "/icon-192-uat.png" : "/icon-192.png";
+const icon512 = isPreview ? "/icon-512-uat.png" : "/icon-512.png";
+
 export const metadata: Metadata = {
-  title: "EpiCentre",
+  title: appName,
   description: "Personal ledger and hub",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "EpiCentre",
+    title: appName,
+  },
+  icons: {
+    icon: [{ url: icon192, sizes: "192x192", type: "image/png" }],
+    apple: [{ url: icon192, sizes: "192x192", type: "image/png" }],
+    other: [{ rel: "icon", url: icon512, sizes: "512x512", type: "image/png" }],
   },
 };
 
