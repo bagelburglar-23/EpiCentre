@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { addEventAction, deleteEventAction } from "@/app/calplus/actions";
-import type { CalEvent } from "@/lib/events";
+import type { CalEvent, CachedGoogleEvent } from "@/lib/events";
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -10,9 +10,18 @@ function ymd(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-function eventDateKey(e: CalEvent): string {
-  return e.start.slice(0, 10);
-}
+// Unifies local (deletable) and Google-sourced (read-only - see
+// lib/google-calendar.ts on why pulled events aren't editable from here)
+// events into one shape for the grid to render without caring which is
+// which, except for the delete handler's presence.
+type DisplayEvent = {
+  key: string;
+  title: string;
+  dateKey: string;
+  isTest: boolean;
+  source: "epic" | "google";
+  onDelete?: () => void;
+};
 
 function buildGrid(year: number, month: number): Date[] {
   const first = new Date(Date.UTC(year, month, 1));
@@ -160,9 +169,13 @@ function EventModal({
 
 export default function CalPlusPanel({
   initialEvents,
+  googleEvents,
+  googleConnected,
   isPreview,
 }: {
   initialEvents: CalEvent[];
+  googleEvents: CachedGoogleEvent[];
+  googleConnected: boolean;
   isPreview: boolean;
 }) {
   const today = new Date();
@@ -175,14 +188,33 @@ export default function CalPlusPanel({
   const grid = useMemo(() => buildGrid(viewYear, viewMonth), [viewYear, viewMonth]);
   const todayKey = ymd(today);
   const eventsByDay = useMemo(() => {
-    const map = new Map<string, CalEvent[]>();
+    const map = new Map<string, DisplayEvent[]>();
+    const push = (e: DisplayEvent) => {
+      if (!map.has(e.dateKey)) map.set(e.dateKey, []);
+      map.get(e.dateKey)!.push(e);
+    };
     for (const e of events) {
-      const key = eventDateKey(e);
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(e);
+      push({
+        key: `epic-${e.id}`,
+        title: e.title,
+        dateKey: e.start.slice(0, 10),
+        isTest: e.isTest,
+        source: "epic",
+        onDelete: () => remove(e.id),
+      });
+    }
+    for (const e of googleEvents) {
+      push({
+        key: `google-${e.gcalEventId}`,
+        title: e.title,
+        dateKey: e.start.slice(0, 10),
+        isTest: false,
+        source: "google",
+      });
     }
     return map;
-  }, [events]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events, googleEvents]);
 
   function changeMonth(delta: number) {
     let m = viewMonth + delta;
@@ -258,6 +290,16 @@ export default function CalPlusPanel({
         </div>
       </div>
 
+      <div className="mb-2 font-mono text-[10px] text-foreground/40">
+        {googleConnected ? (
+          "Google Calendar connected - new events here sync to it, existing Google events shown read-only (marked G)."
+        ) : (
+          <a href="/api/auth/google/connect" className="text-accent hover:text-accent-bright">
+            Connect Google Calendar →
+          </a>
+        )}
+      </div>
+
       <div className="grid grid-cols-7 gap-px overflow-hidden rounded border border-accent-dim bg-accent-dim text-[10px]">
         {DAY_LABELS.map((d) => (
           <div
@@ -290,14 +332,24 @@ export default function CalPlusPanel({
               </div>
               {dayEvents.slice(0, 3).map((e) => (
                 <div
-                  key={e.id}
+                  key={e.key}
                   onClick={(ev) => {
+                    if (!e.onDelete) return;
                     ev.stopPropagation();
-                    remove(e.id);
+                    e.onDelete();
                   }}
-                  title={`${e.title} - click to delete`}
-                  className="mb-0.5 truncate rounded bg-accent-dim px-1 text-accent-bright"
+                  title={
+                    e.source === "google"
+                      ? `${e.title} (from Google Calendar - read only)`
+                      : `${e.title} - click to delete`
+                  }
+                  className={`mb-0.5 truncate rounded px-1 ${
+                    e.source === "google"
+                      ? "bg-foreground/10 text-foreground/70"
+                      : "bg-accent-dim text-accent-bright"
+                  }`}
                 >
+                  {e.source === "google" && "G "}
                   {e.title}
                   {e.isTest && " (test)"}
                 </div>

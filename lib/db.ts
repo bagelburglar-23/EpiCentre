@@ -77,6 +77,35 @@ export function getDb(): Database.Database {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
+
+  // Google Calendar sync. Single row (id=1 always) - one Google account,
+  // one connection, shared by prod and UAT alike (see lib/google-calendar.ts
+  // - this is why the refresh token lives in the shared DB rather than an
+  // env var: only prod's redirect URI is registered with Google, but once
+  // connected, UAT reads the same token from here, no separate OAuth needed).
+  instance.exec(`
+    CREATE TABLE IF NOT EXISTS google_auth (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      refresh_token TEXT NOT NULL,
+      connected_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  // Read-only local cache of events pulled FROM Google Calendar (v1 pull
+  // direction - see GCAL_SETUP.md / conversation history on why this is
+  // read-only: editing a Google-sourced event from Cal+ is the two-way-sync
+  // conflict problem deliberately deferred). Repopulated wholesale by
+  // scripts/sync-google-events.mjs on a timer, not written to elsewhere.
+  instance.exec(`
+    CREATE TABLE IF NOT EXISTS google_events_cache (
+      gcal_event_id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT,
+      start TEXT NOT NULL,
+      end TEXT NOT NULL,
+      all_day INTEGER NOT NULL DEFAULT 0,
+      synced_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
   return instance;
 }
 
