@@ -106,21 +106,6 @@ export function getDb(): Database.Database {
       synced_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
-  // App login password, moved off the APP_PASSWORD env var so it can be
-  // changed from inside the app (see lib/account.ts) - no SSH/VPS access
-  // needed, works from any logged-in device including Phone. Single row
-  // (id=1), same shared-DB pattern as google_auth - this makes the login
-  // password shared between PROD and UAT rather than two independently-set
-  // env vars, which is the right simplification for a single-user app.
-  // Empty until the first in-app password change; lib/account.ts falls
-  // back to APP_PASSWORD until then, so this is a no-downtime cutover.
-  instance.exec(`
-    CREATE TABLE IF NOT EXISTS app_auth (
-      id INTEGER PRIMARY KEY CHECK (id = 1),
-      password_hash TEXT NOT NULL,
-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-    )
-  `);
   return instance;
 }
 
