@@ -40,6 +40,43 @@ export function getDb(): Database.Database {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
+  // Additive-only columns (see ARCHITECTURE.md / Step 1's PROD/UAT design
+  // on why: this table is on the shared database, so a destructive change
+  // here would break the other environment immediately, not just at merge
+  // time). `text` stays the DB column name for the title - only adding
+  // columns, never renaming one on a live shared table.
+  for (const stmt of [
+    `ALTER TABLE todos ADD COLUMN details TEXT`,
+    `ALTER TABLE todos ADD COLUMN due_date TEXT`,
+    `ALTER TABLE todos ADD COLUMN reminder_sent INTEGER NOT NULL DEFAULT 0`,
+  ]) {
+    try {
+      instance.exec(stmt);
+    } catch (e) {
+      if (!(e instanceof Error) || !e.message.includes("duplicate column")) throw e;
+    }
+  }
+
+  // Cal+ base. gcal_event_id/synced_at are forward-looking columns for the
+  // not-yet-built Google Calendar sync (see lib/google-calendar.ts) - added
+  // now, nullable, so that feature doesn't need its own schema migration
+  // later. start/end are ISO 8601 datetimes; all_day events still set both,
+  // at midnight, for simpler range queries.
+  instance.exec(`
+    CREATE TABLE IF NOT EXISTS events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT,
+      start TEXT NOT NULL,
+      end TEXT NOT NULL,
+      all_day INTEGER NOT NULL DEFAULT 0,
+      is_test INTEGER NOT NULL DEFAULT 0,
+      gcal_event_id TEXT,
+      synced_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
   return instance;
 }
 

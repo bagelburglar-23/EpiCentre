@@ -33,67 +33,109 @@ Roughly 20–40 entries is normal. Partial dates are fine (`????-MM-DD`).
 
 ---
 
-## T-03 — Phase A: build in progress (started 2026-10-22)
-**Status:** open · **Next action:** finish the Next.js scaffold once Node
-finishes installing on the laptop (blocked on a Windows admin-permission
-prompt as of this session), then push to the VPS.
+## T-03 — Phase A exit condition: met (2026-10-25)
 
-Session 1 (2026-09-06): design only, no code. Outcomes: module contract
-confirmed; `ARCHITECTURE.md` critique (P1–P10) folded in; VPS adopted (D-15);
-agent integration made a standing constraint (D-16); drop `lib/schema.ts` for
-a drizzle glob (D-17); `git init` done.
-
-Session 2 (2026-10-22): asked for the fastest path to "hub running 24/7,
-installable on desktop Chrome + iPhone." Re-scoped the deploy mechanism for
-speed — **no GitHub, no separate `deploy.sh`, no non-root push user.** A bare
-repo on the VPS (`/opt/epicentre.git`) with a `post-receive` hook
-(`deploy/post-receive`) builds and restarts on every `git push vps main`; the
-VPS's own `deploy` account is a no-login system account that only *runs* the
-service (`ARCHITECTURE.md` "Hosting & deploy" updated to match; the push
-itself still runs as root — flagged as a known shortcut in `DEPLOY.md`, not
-hardened yet). Progress this session:
-
-- `state/` + `bin/` move done (resolves the path drift noted in session 1).
-- `deploy/epicentre.service`, `deploy/post-receive`, `DEPLOY.md` written.
-- Node.js LTS install kicked off via `winget` — **stalled on a Windows UAC
-  prompt** that needs a manual click (the tool can't answer a GUI dialog).
-  Check `node -v` on the laptop; if still missing, the winget install is
-  sitting at an elevation prompt — click it, or run
-  `winget install --id OpenJS.NodeJS.LTS -e` by hand.
-
-**Once Node is confirmed:** scaffold Next.js in place (same approach as
-before — set `.gitignore`/`.gitattributes`/`README.md` aside, run
-`create-next-app@latest .`, restore them), add a minimal shell page + PWA
-manifest, commit.
-
-**Build order** (smallest shippable first, condensed for speed): 0 repo
-layout (done) · 1 create-next-app + minimal shell + manifest (in progress) ·
-2 VPS one-time setup (`DEPLOY.md`) + first `git push vps main` + `tailscale
-serve --bg 3000` + install on phone/desktop · 3 auth gate · 4 SQLite+Drizzle ·
-5 add+list · 6 edit+delete · 7 seed from `state/ledger.md` · 8 nightly backup
-cron · 9 `.ics` export → Google Calendar · 10 refactor into `modules/ledger/`
-+ registry + dashboard + extract `_template`.
-
-**Not yet done, explicitly deferred past today's "live" milestone:** the
-password gate (D-11/D-13 — box is tailnet-only and holds no data yet, so
-this is acceptable for a few days but not longer), nightly backup cron (no
-DB yet either).
+Ledger... well, superseded by events (see T-05) — the actual Phase A
+deliverable (installable, VPS-hosted, on PC + Phone) shipped 2026-10-25.
+Real ledger data entry (T-02) is still open but no longer blocking — the
+app evolved past a ledger-only scope that evening (see T-05). Kept here for
+history; **T-05 is the live thread now.**
 
 ---
 
-## T-04 — VPS baseline
-**Status:** mostly done · **Blocks:** nothing currently
+## T-04 — VPS baseline: done
+**Status:** done · **Blocks:** nothing
 
-Box confirmed: KVM, Ubuntu 24.04.4, root, systemd, 2 vCPU / 8 GB / 96 GB.
-**openclaw + Traefik removed and verified** (2026-09-06 session) — ports
-80/443 free, 1.4 GB reclaimed, Docker itself kept for future agent workers.
+KVM, Ubuntu 24.04.4, 2 vCPU/8GB/96GB. `claude` is an unprivileged, no-sudo
+user (deliberately — see `ARCHITECTURE.md` "Agent integration" and the
+plan file history: a first attempt to grant Claude sudo was refused by
+Claude Code's own safety classifier). Runs the app via `systemctl --user`
+with `loginctl enable-linger claude`. Tailscale operator rights granted to
+`claude` (`tailscale set --operator=claude`) so Claude can manage serve
+rules without root. Node 24, build-essential, all present.
 
-**Remaining, all in `DEPLOY.md`'s one consolidated script:** `apt upgrade` +
-reboot (pending kernel update was still outstanding last check) → Node 24 +
-`build-essential` → the `deploy` system account → the bare repo + hook →
-the `systemd` unit → `ufw` → Tailscale install + `tailscale up` (needs a
-browser approval click) → `tailscale serve --bg 3000` once something is
-listening on port 3000.
+---
+
+## T-05 — Review-gated pipeline + first real features (live thread)
+**Status:** open, mid-build · **Started:** 2026-10-25, continuing into
+2026-10-26 as an unattended overnight batch while Lucas slept.
+
+### The pipeline (shipped, working)
+
+Branch → push (human, Claude is blocked from `git push` by Claude Code's
+own publish-safety classifier — hit repeatedly, not worth fighting) →
+GitHub Action auto-opens a PR + deploys to a **UAT instance** on the VPS →
+review the diff + click around the live UAT URL → merge → a second Action
+deploys to **prod**. Both environments share one SQLite database
+(`/home/claude/shared/epicentre.db`) — not synced copies, genuinely the
+same file (WAL mode) — with an `is_test` column convention so UAT-only test
+rows never reach prod's queries. UAT's accent color (red/blue/grey Tron
+theme) reflects whether its deployed commit matches prod's, read live via
+a `deploy_state` table, not baked in at build time.
+
+**URLs:** prod `https://srv1648855.tail523e0b.ts.net/` · UAT
+`https://srv1648855.tail523e0b.ts.net:8443/` (a dedicated port, not a path
+— `tailscale serve --set-path` turned out to strip the prefix before
+forwarding, which breaks Next.js's asset URLs under a `basePath`; a
+separate HTTPS port sidesteps the whole problem. Do not reintroduce a
+path-mounted UAT without re-reading that fight in the git log first.)
+
+**Two installable PWAs**, confirmed working on PC + Phone: "EpiCentre"
+(red ripple-rings icon) and "EpiCentre UAT" (blue) — different origins
+(different port = different origin) means they install as genuinely
+separate apps.
+
+### Branches in flight, not yet pushed/merged
+
+- `feature/todo-list-and-shell` — **committed locally, not yet pushed.**
+  Sidebar + VS Code-style tabs (now localStorage-persistent across
+  refresh), a real `todos` table (title/details/due_date/reminder_sent,
+  additive columns only — this table is on the shared DB, a destructive
+  change would break prod and UAT simultaneously), popup entry modal,
+  Telegram reminder script (`scripts/send-due-reminders.mjs`, standalone,
+  no `next/server` import so it runs via plain `node`) wired to a daily
+  VPS systemd timer (09:00 UTC) that currently no-ops — safe — until
+  `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` exist in
+  `/home/claude/epicentre.env`. Site-wide Inter+JetBrains Mono, tighter
+  spacing ("sleek compact electronic" ask).
+  **Resume:** `git push origin feature/todo-list-and-shell`, then open the
+  PR, review on UAT, merge.
+
+- `feature/calplus-base` — **committed locally, not yet pushed. Branched on
+  top of `feature/todo-list-and-shell`** (needs its Shell component) — push
+  and merge that one first, or GitHub will show a combined diff, which is
+  fine but worth knowing going in. New `events` table (same shared-DB/
+  `is_test` pattern), month-grid Cal+ panel, event CRUD. **Not visually
+  verified** — curl can't click the sidebar tab to render the calendar
+  grid client-side; the build is clean and the data layer is tested, but
+  actually look at the month grid before trusting it fully.
+  Google Calendar sync is **not implemented** — `lib/google-calendar.ts`
+  is a scaffold, `GCAL_SETUP.md` (repo root) has the exact steps to get
+  `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`. v1 plan is one-way (EpiC→
+  Google push) only — two-way needs a conflict-resolution design not worth
+  rushing blind.
+  **Resume:** `git push origin feature/calplus-base`, same review flow.
+
+### Waiting on Lucas (nothing to build until these arrive)
+
+- `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` (via @BotFather — see the
+  session where this was asked) → add to `/home/claude/epicentre.env`,
+  reminders start working on the next scheduled timer run, no redeploy
+  needed.
+- `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` (steps in `GCAL_SETUP.md`) →
+  unblocks building the actual GCal OAuth + one-way sync.
+
+### Known not-yet-done, not blocking anything above
+
+- Password gate (D-11/D-13) — still open. Box is tailnet-only, but real
+  data (todos, events) now exists where it didn't before. This is the
+  next thing to prioritize once the two branches above are merged and
+  settled, not indefinitely deferred.
+- `state/ledger.md` real entries (T-02) — the original ledger module
+  itself hasn't been built yet; the to-do list became the first real
+  module instead (Lucas's call, documented in conversation).
+- Nightly SQLite backup cron (ARCHITECTURE.md's original plan) — more
+  pressing now that real todos/events data exists in the shared DB.
 
 ---
 
