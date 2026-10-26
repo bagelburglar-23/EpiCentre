@@ -89,6 +89,31 @@ export function deleteEvent(id: number): void {
   getDb().prepare(`DELETE FROM events WHERE id = ?`).run(id);
 }
 
+// Deliberately does NOT push the edit to Google, even if the row already
+// has a gcal_event_id from an earlier push - syncing edits back to an
+// already-pushed event is the two-way-sync/conflict-resolution problem
+// the v1 scope explicitly deferred (see lib/google-calendar.ts's header).
+// An edited event that was already on Google will just diverge from its
+// Google copy until that's built.
+export function updateEvent(
+  id: number,
+  title: string,
+  description: string,
+  start: string,
+  end: string,
+  allDay: boolean
+): boolean {
+  const trimmedTitle = title.trim();
+  if (!trimmedTitle || !start) return false;
+  const info = getDb()
+    .prepare(
+      `UPDATE events SET title = ?, description = ?, start = ?, end = ?, all_day = ?, updated_at = datetime('now')
+       WHERE id = ?`
+    )
+    .run(trimmedTitle, description.trim() || null, start, end || start, allDay ? 1 : 0, id);
+  return info.changes > 0;
+}
+
 export function markSyncedToGoogle(id: number, gcalEventId: string): void {
   getDb()
     .prepare(
@@ -104,6 +129,7 @@ export type CachedGoogleEvent = {
   start: string;
   end: string;
   allDay: boolean;
+  calendarName: string | null;
 };
 
 type CacheRow = {
@@ -113,6 +139,7 @@ type CacheRow = {
   start: string;
   end: string;
   all_day: number;
+  calendar_name: string | null;
 };
 
 // Read-only mirror, populated by scripts/sync-google-events.mjs - see that
@@ -125,7 +152,7 @@ export async function listCachedGoogleEvents(
   await connection();
   const rows = getDb()
     .prepare(
-      `SELECT gcal_event_id, title, description, start, end, all_day
+      `SELECT gcal_event_id, title, description, start, end, all_day, calendar_name
        FROM google_events_cache WHERE start < ? AND end >= ? ORDER BY start ASC`
     )
     .all(rangeEnd, rangeStart) as CacheRow[];
@@ -136,5 +163,6 @@ export async function listCachedGoogleEvents(
     start: r.start,
     end: r.end,
     allDay: !!r.all_day,
+    calendarName: r.calendar_name,
   }));
 }

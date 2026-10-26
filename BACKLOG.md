@@ -53,6 +53,16 @@ Not before Phase B, one at a time.
 - [2026-09-03] Public holiday import once T-01 resolves
 - [2026-09-03] Gift history per person — what was given, when
 
+## Cal+ / Google Calendar parity (deferred beyond Month/Week/Day + day drill-down)
+
+- [2026-10-27] Drag-to-move / resize events on the grid
+- [2026-10-27] Recurring events (RRULE)
+- [2026-10-27] Multi-day event bars spanning across days in the grid
+- [2026-10-27] Per-calendar show/hide toggles + per-calendar colors (now that 22 calendars sync in)
+- [2026-10-27] In-app search across events
+- [2026-10-27] Year view
+- [2026-10-27] Time-zone handling beyond UTC-everywhere
+
 ## New
 
 <!-- add below -->

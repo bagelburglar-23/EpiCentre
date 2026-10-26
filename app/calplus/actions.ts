@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { addEvent, deleteEvent, markSyncedToGoogle } from "@/lib/events";
+import { addEvent, deleteEvent, updateEvent, markSyncedToGoogle } from "@/lib/events";
 import { isGoogleCalendarConnected, pushEventToGoogle } from "@/lib/google-calendar";
 
 export async function addEventAction(
@@ -30,6 +30,18 @@ export async function addEventAction(
       console.error("Failed to push event to Google Calendar:", e);
     }
   }
+  revalidatePath("/");
+}
+
+export async function updateEventAction(
+  id: number,
+  title: string,
+  description: string,
+  start: string,
+  end: string,
+  allDay: boolean
+) {
+  updateEvent(id, title, description, start, end, allDay);
   revalidatePath("/");
 }
 
