@@ -56,6 +56,8 @@ export async function listEventsInRange(
 
 // Mutation cores - plain functions, no FormData/cookies/redirect (see
 // ARCHITECTURE.md "Actions: mutation core + adapter").
+// Returns the new row's id (or null if validation failed) - the action
+// adapter needs it to push the event to Google right after.
 export function addEvent(
   title: string,
   description: string,
@@ -63,11 +65,11 @@ export function addEvent(
   end: string,
   allDay: boolean,
   isTest: boolean
-): void {
+): { id: number; isTest: boolean } | null {
   const trimmedTitle = title.trim();
-  if (!trimmedTitle || !start) return;
+  if (!trimmedTitle || !start) return null;
   const forcedTest = isProduction() ? false : isTest;
-  getDb()
+  const info = getDb()
     .prepare(
       `INSERT INTO events (title, description, start, end, all_day, is_test, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`
@@ -80,8 +82,59 @@ export function addEvent(
       allDay ? 1 : 0,
       forcedTest ? 1 : 0
     );
+  return { id: Number(info.lastInsertRowid), isTest: forcedTest };
 }
 
 export function deleteEvent(id: number): void {
   getDb().prepare(`DELETE FROM events WHERE id = ?`).run(id);
+}
+
+export function markSyncedToGoogle(id: number, gcalEventId: string): void {
+  getDb()
+    .prepare(
+      `UPDATE events SET gcal_event_id = ?, synced_at = datetime('now') WHERE id = ?`
+    )
+    .run(gcalEventId, id);
+}
+
+export type CachedGoogleEvent = {
+  gcalEventId: string;
+  title: string;
+  description: string | null;
+  start: string;
+  end: string;
+  allDay: boolean;
+};
+
+type CacheRow = {
+  gcal_event_id: string;
+  title: string;
+  description: string | null;
+  start: string;
+  end: string;
+  all_day: number;
+};
+
+// Read-only mirror, populated by scripts/sync-google-events.mjs - see that
+// file and lib/google-calendar.ts for why this is a separate cache table
+// rather than a live API call per page load.
+export async function listCachedGoogleEvents(
+  rangeStart: string,
+  rangeEnd: string
+): Promise<CachedGoogleEvent[]> {
+  await connection();
+  const rows = getDb()
+    .prepare(
+      `SELECT gcal_event_id, title, description, start, end, all_day
+       FROM google_events_cache WHERE start < ? AND end >= ? ORDER BY start ASC`
+    )
+    .all(rangeEnd, rangeStart) as CacheRow[];
+  return rows.map((r) => ({
+    gcalEventId: r.gcal_event_id,
+    title: r.title,
+    description: r.description,
+    start: r.start,
+    end: r.end,
+    allDay: !!r.all_day,
+  }));
 }
