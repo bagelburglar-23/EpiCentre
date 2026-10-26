@@ -2,6 +2,7 @@
 
 import { useActionState, useRef } from "react";
 import { changePasswordAction } from "@/app/settings/actions";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function SettingsPanel() {
   const formRef = useRef<HTMLFormElement>(null);
@@ -28,23 +29,20 @@ export default function SettingsPanel() {
         <h2 className="mb-1 font-mono text-xs uppercase tracking-wide text-foreground/60">
           Change password
         </h2>
-        <input
-          type="password"
+        <PasswordInput
           name="current"
           placeholder="Current password"
           required
           className="rounded border border-accent-dim bg-black px-2.5 py-1.5 text-sm text-foreground outline-none focus:border-accent"
         />
-        <input
-          type="password"
+        <PasswordInput
           name="next"
           placeholder="New password (min 8 characters)"
           required
           minLength={8}
           className="rounded border border-accent-dim bg-black px-2.5 py-1.5 text-sm text-foreground outline-none focus:border-accent"
         />
-        <input
-          type="password"
+        <PasswordInput
           name="confirm"
           placeholder="Confirm new password"
           required
