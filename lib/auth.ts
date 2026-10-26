@@ -37,6 +37,8 @@ export async function verifySessionToken(token: string | undefined): Promise<boo
   }
 }
 
-// Password checking/changing lives in lib/account.ts, not here - it needs
-// getDb() (better-sqlite3), which this file must stay free of since
-// proxy.ts imports it on the Edge runtime. See lib/account.ts's header.
+export function checkPassword(candidate: string): boolean {
+  const expected = process.env.APP_PASSWORD;
+  if (!expected) return false;
+  return candidate === expected;
+}
