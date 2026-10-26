@@ -2,11 +2,12 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { checkPassword, createSessionToken, SESSION_COOKIE_NAME } from "@/lib/auth";
+import { createSessionToken, SESSION_COOKIE_NAME } from "@/lib/auth";
+import { verifyAppPassword } from "@/lib/account";
 
 export async function loginAction(formData: FormData): Promise<{ error?: string }> {
   const password = String(formData.get("password") ?? "");
-  if (!checkPassword(password)) {
+  if (!verifyAppPassword(password)) {
     return { error: "Wrong password." };
   }
   const token = await createSessionToken();
