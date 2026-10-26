@@ -20,6 +20,7 @@ export default function Shell({ items }: { items: NavItem[] }) {
   const [openTabs, setOpenTabs] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -69,6 +70,20 @@ export default function Shell({ items }: { items: NavItem[] }) {
     });
   }
 
+  // Native HTML5 drag-and-drop (no library - this is the only place in the
+  // app that needs it) - draggable + onDragStart/onDragOver/onDrop on the
+  // tab bar's divs below. Reordering just rewrites openTabs, which the
+  // existing save effect already persists to localStorage.
+  function reorderTab(targetId: string) {
+    if (!draggedId || draggedId === targetId) return;
+    setOpenTabs((prev) => {
+      const next = prev.filter((t) => t !== draggedId);
+      const targetIndex = next.indexOf(targetId);
+      next.splice(targetIndex, 0, draggedId);
+      return next;
+    });
+  }
+
   const byId = Object.fromEntries(items.map((i) => [i.id, i]));
 
   return (
@@ -100,8 +115,18 @@ export default function Shell({ items }: { items: NavItem[] }) {
             {openTabs.map((id) => (
               <div
                 key={id}
+                draggable
+                onDragStart={() => setDraggedId(id)}
+                onDragEnd={() => setDraggedId(null)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  reorderTab(id);
+                }}
                 onClick={() => setActiveTab(id)}
                 className={`flex cursor-pointer items-center gap-1.5 border-r border-accent-dim px-2.5 py-1.5 font-mono text-xs ${
+                  draggedId === id ? "opacity-40" : ""
+                } ${
                   activeTab === id
                     ? "bg-accent-dim text-accent-bright"
                     : "text-foreground/50 hover:text-foreground"

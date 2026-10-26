@@ -11,8 +11,17 @@ import { getDb } from "@/lib/db";
 // not built - that needs a conflict-resolution design not worth rushing.
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
-const CALENDAR_API = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
-export const GOOGLE_CALENDAR_SCOPES = "https://www.googleapis.com/auth/calendar.events";
+const CALENDAR_LIST_API = "https://www.googleapis.com/calendar/v3/users/me/calendarList";
+function calendarEventsUrl(calendarId: string): string {
+  return `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`;
+}
+// calendar.events (push) + calendar.readonly (list/read every calendar on
+// the account, not just primary - needed for Birthdays etc, see
+// scripts/sync-google-events.mjs). Widening this scope means an
+// already-connected refresh_token won't have it - reconnecting via
+// getAuthUrl (forces prompt=consent) re-grants it.
+export const GOOGLE_CALENDAR_SCOPES =
+  "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly";
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -118,7 +127,7 @@ export async function pushEventToGoogle(event: {
   allDay: boolean;
 }): Promise<string> {
   const accessToken = await getAccessToken();
-  const res = await fetch(CALENDAR_API, {
+  const res = await fetch(calendarEventsUrl("primary"), {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -143,14 +152,30 @@ export type FetchedGoogleEvent = {
   start: string;
   end: string;
   allDay: boolean;
+  calendarName: string;
 };
 
-// Used by scripts/sync-google-events.mjs. rangeStart/End are ISO datetimes.
+async function listCalendars(
+  accessToken: string
+): Promise<{ id: string; summary: string }[]> {
+  const res = await fetch(CALENDAR_LIST_API, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) throw new Error(`Google calendar list failed: ${await res.text()}`);
+  const data = (await res.json()) as { items: { id: string; summary?: string }[] };
+  return (data.items ?? []).map((c) => ({ id: c.id, summary: c.summary ?? c.id }));
+}
+
+// Used by scripts/sync-google-events.mjs (that copy is kept in sync by
+// hand, not imported - see its own header). Pulls every calendar on the
+// account (Birthdays etc, not just primary), rangeStart/End are ISO
+// datetimes.
 export async function fetchGoogleEvents(
   rangeStart: string,
   rangeEnd: string
 ): Promise<FetchedGoogleEvent[]> {
   const accessToken = await getAccessToken();
+  const calendars = await listCalendars(accessToken);
   const params = new URLSearchParams({
     timeMin: rangeStart,
     timeMax: rangeEnd,
@@ -158,29 +183,35 @@ export async function fetchGoogleEvents(
     orderBy: "startTime",
     maxResults: "250",
   });
-  const res = await fetch(`${CALENDAR_API}?${params}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!res.ok) throw new Error(`Google event list failed: ${await res.text()}`);
-  const data = (await res.json()) as {
-    items: {
-      id: string;
-      summary?: string;
-      description?: string;
-      start: { date?: string; dateTime?: string };
-      end: { date?: string; dateTime?: string };
-    }[];
-  };
-  return (data.items ?? []).map((item) => {
-    const start = fromGoogleTime(item.start);
-    const end = fromGoogleTime(item.end);
-    return {
-      gcalEventId: item.id,
-      title: item.summary ?? "(untitled)",
-      description: item.description ?? null,
-      start: start.iso,
-      end: end.iso,
-      allDay: start.allDay,
+
+  const results: FetchedGoogleEvent[] = [];
+  for (const cal of calendars) {
+    const res = await fetch(`${calendarEventsUrl(cal.id)}?${params}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) continue; // one calendar's odd permissions shouldn't fail the whole pull
+    const data = (await res.json()) as {
+      items: {
+        id: string;
+        summary?: string;
+        description?: string;
+        start: { date?: string; dateTime?: string };
+        end: { date?: string; dateTime?: string };
+      }[];
     };
-  });
+    for (const item of data.items ?? []) {
+      const start = fromGoogleTime(item.start);
+      const end = fromGoogleTime(item.end);
+      results.push({
+        gcalEventId: item.id,
+        title: item.summary ?? "(untitled)",
+        description: item.description ?? null,
+        start: start.iso,
+        end: end.iso,
+        allDay: start.allDay,
+        calendarName: cal.summary,
+      });
+    }
+  }
+  return results;
 }

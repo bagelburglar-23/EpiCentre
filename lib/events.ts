@@ -104,6 +104,7 @@ export type CachedGoogleEvent = {
   start: string;
   end: string;
   allDay: boolean;
+  calendarName: string | null;
 };
 
 type CacheRow = {
@@ -113,6 +114,7 @@ type CacheRow = {
   start: string;
   end: string;
   all_day: number;
+  calendar_name: string | null;
 };
 
 // Read-only mirror, populated by scripts/sync-google-events.mjs - see that
@@ -125,7 +127,7 @@ export async function listCachedGoogleEvents(
   await connection();
   const rows = getDb()
     .prepare(
-      `SELECT gcal_event_id, title, description, start, end, all_day
+      `SELECT gcal_event_id, title, description, start, end, all_day, calendar_name
        FROM google_events_cache WHERE start < ? AND end >= ? ORDER BY start ASC`
     )
     .all(rangeEnd, rangeStart) as CacheRow[];
@@ -136,5 +138,6 @@ export async function listCachedGoogleEvents(
     start: r.start,
     end: r.end,
     allDay: !!r.all_day,
+    calendarName: r.calendar_name,
   }));
 }

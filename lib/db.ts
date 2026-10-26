@@ -106,6 +106,17 @@ export function getDb(): Database.Database {
       synced_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
+  // Additive - see the todos table above for why ALTER TABLE rather than
+  // widening the CREATE TABLE. calendar_name distinguishes which Google
+  // calendar an event came from (primary/Birthdays/etc - see
+  // scripts/sync-google-events.mjs, now pulling all of them, not just
+  // primary). Nullable since rows synced before this column existed won't
+  // have it until the next sync run overwrites them.
+  try {
+    instance.exec(`ALTER TABLE google_events_cache ADD COLUMN calendar_name TEXT`);
+  } catch (e) {
+    if (!(e instanceof Error) || !e.message.includes("duplicate column")) throw e;
+  }
   // App login password, moved off the APP_PASSWORD env var so it can be
   // changed from inside the app (see lib/account.ts) - no SSH/VPS access
   // needed, works from any logged-in device including Phone. Single row

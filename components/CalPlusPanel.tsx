@@ -20,6 +20,7 @@ type DisplayEvent = {
   dateKey: string;
   isTest: boolean;
   source: "epic" | "google";
+  calendarName?: string | null;
   onDelete?: () => void;
 };
 
@@ -210,6 +211,7 @@ export default function CalPlusPanel({
         dateKey: e.start.slice(0, 10),
         isTest: false,
         source: "google",
+        calendarName: e.calendarName,
       });
     }
     return map;
@@ -292,7 +294,17 @@ export default function CalPlusPanel({
 
       <div className="mb-2 font-mono text-[10px] text-foreground/40">
         {googleConnected ? (
-          "Google Calendar connected - new events here sync to it, existing Google events shown read-only (marked G)."
+          <>
+            Google Calendar connected - new events here sync to it, events
+            from every calendar on the account shown read-only (marked G).{" "}
+            <a
+              href="/api/auth/google/connect"
+              className="text-accent hover:text-accent-bright"
+            >
+              Reconnect
+            </a>{" "}
+            if you connected before multi-calendar pull was added.
+          </>
         ) : (
           <a href="/api/auth/google/connect" className="text-accent hover:text-accent-bright">
             Connect Google Calendar →
@@ -340,7 +352,7 @@ export default function CalPlusPanel({
                   }}
                   title={
                     e.source === "google"
-                      ? `${e.title} (from Google Calendar - read only)`
+                      ? `${e.title} (${e.calendarName ?? "Google Calendar"} - read only)`
                       : `${e.title} - click to delete`
                   }
                   className={`mb-0.5 truncate rounded px-1 ${
