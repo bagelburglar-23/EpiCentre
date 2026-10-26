@@ -6,6 +6,7 @@ import { isGoogleCalendarConnected } from "@/lib/google-calendar";
 import Shell from "@/components/Shell";
 import TodoPanel from "@/components/TodoPanel";
 import CalPlusPanel from "@/components/CalPlusPanel";
+import SettingsPanel from "@/components/SettingsPanel";
 
 export default async function Home() {
   // new Date() is flagged as an "unstable value" during prerendering on its
@@ -50,6 +51,11 @@ export default async function Home() {
               isPreview={isPreview}
             />
           ),
+        },
+        {
+          id: "settings",
+          label: "Settings",
+          content: <SettingsPanel />,
         },
       ]}
     />
