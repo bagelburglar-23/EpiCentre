@@ -33,6 +33,14 @@ jobs:
           username: claude
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            # set -e is the actual fix for a real incident: without it, a
+            # failed `npm run build` (e.g. a dependency installed by hand
+            # during testing but never committed - exactly what happened
+            # here) didn't stop the script, so it proceeded straight to
+            # `systemctl restart` with no valid .next directory, crash-
+            # looping the service. Now any failed step aborts the deploy
+            # instead of restarting into a broken build.
+            set -e
             export XDG_RUNTIME_DIR=/run/user/$(id -u)
             if [ -d /home/claude/epicentre-preview/.git ]; then
               cd /home/claude/epicentre-preview
@@ -44,6 +52,7 @@ jobs:
                 git@github.com:bagelburglar-23/EpiCentre.git /home/claude/epicentre-preview
               cd /home/claude/epicentre-preview
             fi
+            set -a; source /home/claude/epicentre-preview.env; set +a
             export DEPLOY_ENV=preview
             export DATABASE_PATH=/home/claude/shared/epicentre.db
             export NEXT_PUBLIC_COMMIT_SHA=$(git rev-parse HEAD)

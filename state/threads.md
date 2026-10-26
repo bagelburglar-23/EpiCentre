@@ -125,6 +125,33 @@ separate apps.
 - `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` (steps in `GCAL_SETUP.md`) →
   unblocks building the actual GCal OAuth + one-way sync.
 
+### Update, later the same night — both branches merged, 3 more built
+
+Both branches above got merged (`todo-list-and-shell`, `calplus-base`) —
+confirmed live on prod. Three more branches since, **committed locally,
+not yet pushed:**
+
+- `feature/sync-uat-on-merge` — real bug found live: a merge always
+  creates a new commit SHA distinct from the feature branch tip, so UAT's
+  accent could never turn grey post-merge under the original design
+  (fixed it before realizing — manually synced UAT once to confirm the
+  fix works; the commit is what makes it automatic going forward). Push,
+  review, merge like the others.
+- `feature/auth-gate` — password gate, `lib/auth.ts` + `proxy.ts` (Next.js
+  16 renamed `middleware.ts` → `proxy.ts` mid-session — fixed to avoid
+  shipping with a deprecation warning). `SESSION_SECRET`/`APP_PASSWORD`
+  already generated and set in both VPS env files — **not derivable from
+  the diff**, check `/home/claude/epicentre.env` directly if the password
+  needs retrieving/changing later. **Verified:** clean build, unauthenticated
+  requests correctly redirect to `/login`. **Not verified:** the actual
+  login form submission — goes through React's own server-action fetch
+  protocol, which curl can't replicate (confirmed by inspecting the
+  rendered form's deliberately inert `action="javascript:throw..."`
+  attribute). Needs a real browser check before trusting it fully.
+
+Push order: `sync-uat-on-merge` and `auth-gate` are independent of each
+other, either order is fine; both are already based on current `main`.
+
 ### Known not-yet-done, not blocking anything above
 
 - Password gate (D-11/D-13) — still open. Box is tailnet-only, but real
