@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { loginAction } from "./actions";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState(
@@ -18,12 +19,11 @@ export default function LoginPage() {
         <h1 className="mb-4 font-mono text-sm uppercase tracking-wide text-accent-bright">
           EpiCentre
         </h1>
-        <input
-          type="password"
+        <PasswordInput
           name="password"
           autoFocus
           placeholder="Password"
-          className="mb-3 w-full rounded border border-accent-dim bg-black px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
+          className="mb-3 rounded border border-accent-dim bg-black px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
         />
         {state.error && (
           <p className="mb-3 font-mono text-xs text-accent-bright">{state.error}</p>
