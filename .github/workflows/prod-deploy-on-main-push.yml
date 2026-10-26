@@ -30,6 +30,31 @@ jobs:
             npm run build
             node scripts/record-deploy.mjs production "$NEXT_PUBLIC_COMMIT_SHA"
             systemctl --user restart epicentre
-            # UAT reads deploy_state live, per request (see lib/db.ts /
-            # connection()) - its accent reflects this the moment the row
-            # above is written, no restart of epicentre-preview needed.
+
+      - name: Reset UAT to match main (so it goes grey)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: claude
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            # A merge always creates a new commit SHA distinct from the
+            # feature branch's tip, so UAT's last build (built from the
+            # branch) can never equal prod's post-merge SHA on its own -
+            # confirmed by testing, not theoretical. Rebuilding UAT from
+            # the same main commit prod just deployed is what actually
+            # makes the grey comparison in app/layout.tsx true. Until the
+            # next feature branch pushes (which redeploys UAT and goes
+            # blue again), UAT now simply mirrors main - correct, since
+            # there's nothing left under review at that point.
+            export XDG_RUNTIME_DIR=/run/user/$(id -u)
+            cd /home/claude/epicentre-preview
+            git fetch origin main
+            git reset --hard origin/main
+            export DEPLOY_ENV=preview
+            export DATABASE_PATH=/home/claude/shared/epicentre.db
+            export NEXT_PUBLIC_COMMIT_SHA=$(git rev-parse HEAD)
+            npm ci
+            npm run build
+            node scripts/record-deploy.mjs preview "$NEXT_PUBLIC_COMMIT_SHA"
+            systemctl --user restart epicentre-preview
