@@ -14,7 +14,8 @@ a task list can't represent.
 - **State:** prod + UAT healthy. Mobile pipeline live: iPhone Claude app →
   VPS `claude-rc` → `feature/*` push → UAT → merge in the GitHub app → prod.
 - **In flight:** `feature/mobile-workflow` — real VPS deploy docs
-  (`deploy/README.md`), CLAUDE.md mobile section, this block.
+  (`deploy/README.md`), CLAUDE.md mobile section, this block; preview
+  workflow now requests Lucas's review after UAT deploys (phone push).
 - **Next:** (1) nightly SQLite backup — the most important open Phase A
   item, now that real data lives in one DB shared by prod and UAT;
   (2) optional: Termius break-glass SSH key on the iPhone.
