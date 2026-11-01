@@ -14,13 +14,15 @@ a task list can't represent.
 - **State:** prod + UAT healthy. Mobile pipeline live and tested (#15):
   iPhone Claude app → VPS `claude-rc` → `feature/*` push → UAT → review
   request → merge in the GitHub app → prod.
-- **In flight:** `feature/todo-edit-description` — to-do details render
-  `- ` lines as bullets, details collapsed behind ▸ by default, tap a title
-  to edit title/details/due date (`updateTodo` in `lib/todos.ts`; changing
-  the due date re-arms the Telegram reminder).
-- **Next:** (1) nightly SQLite backup — the most important open Phase A
-  item, now that real data lives in one DB shared by prod and UAT;
-  (2) optional: Termius break-glass SSH key on the iPhone.
+- **In flight:** `feature/db-backup` — nightly encrypted off-VPS backup
+  (`scripts/backup-db.mjs` + `epicentre-backup.timer`), age-encrypted to a
+  private `epicentre-backups` repo; prod deploy now installs systemd units
+  from `deploy/systemd-user/`. **Off until bootstrapped** (age key + backup
+  repo) — see `deploy/README.md` "Backups". To-do edit shipped (#16).
+- **Next:** (1) **bootstrap the backup** — install `age`, make the keypair
+  (secret key → password manager only), create private `epicentre-backups`,
+  write `~/epicentre-backup.env`; (2) Termius break-glass SSH key on iPhone;
+  (3) let Claude read service status/logs (loosen deny rules).
 - **Open, not yet decided:** Phase A as written (ledger) vs what was built
   (to-do, Cal+) — `ROADMAP.md` not updated; Telegram reminders vs D-12; the
   shared prod/UAT DB and the OAuth API routes have no D-entry.

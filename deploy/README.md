@@ -33,10 +33,78 @@ the ruleset is what keeps pushes off `main`.
 
 ## Unit files
 
-`systemd-user/` holds copies; the live files are in
-`~/.config/systemd/user/`. After changing a live unit:
-`systemctl --user daemon-reload && systemctl --user restart <unit>`, then
-copy it back here.
+`systemd-user/` is the source of truth. The **prod deploy installs them**:
+each merge to `main` copies `deploy/systemd-user/*` into
+`~/.config/systemd/user/` and runs `daemon-reload`, so adding or changing a
+unit there goes live on merge (a running unit keeps running; only
+`epicentre` is restarted). A new *service* still needs a one-line
+`systemctl --user enable --now <unit>` the first time (the backup timer is
+already wired into the deploy). For an urgent hand-edit on the box, change
+the live file, `daemon-reload && restart <unit>`, then copy it back here or
+the next deploy reverts it.
+
+## Backups
+
+Nightly encrypted copy of `~/shared/epicentre.db` to a **private** GitHub
+repo, plus 14 plaintext dailies kept on the VPS in `~/backups`.
+`scripts/backup-db.mjs` runs from `epicentre-backup.timer` (18:00 UTC =
+02:00 HKT). It is **off** until bootstrapped — until then it logs "not
+configured" and exits 0.
+
+How it protects the data: the VPS holds only the age **public** key, so it
+can make backups but cannot read them back. The **secret** key lives only in
+Lucas's password manager; it is the one thing that can decrypt a backup, and
+it is never on the VPS. The app repo is public, so backups go to a separate
+private repo and are encrypted regardless.
+
+One file holds everything both environments use — to-dos, Cal+ events, the
+Google refresh token, the app-password hash — so **treat a backup like a
+secret** and never commit one to the public app repo.
+
+### Bootstrap (one time, needs a shell on the VPS)
+
+```bash
+# 1. install the age binary (not in git; reinstall after a VPS rebuild)
+curl -fsSL https://github.com/FiloSottile/age/releases/download/v1.2.1/age-v1.2.1-linux-amd64.tar.gz \
+  | tar -xz -C /tmp && install -m755 /tmp/age/age /tmp/age/age-keygen ~/.local/bin/
+
+# 2. make the keypair. PRINT THE SECRET KEY ONCE, store it in the password
+#    manager, then remove it from the VPS. Keep only the public line here.
+age-keygen -o /tmp/epicentre-age.key          # prints "Public key: age1..."
+grep -v '^#' /tmp/epicentre-age.key            # the AGE-SECRET-KEY-1... line -> password manager
+#    ... copy it to the password manager now ...
+shred -u /tmp/epicentre-age.key                # the VPS keeps no secret key
+
+# 3. create a PRIVATE GitHub repo `epicentre-backups` (GitHub app/web), then
+#    add the VPS deploy key to it with WRITE access:
+cat ~/.ssh/id_ed25519.pub                       # -> repo Settings -> Deploy keys (Allow write)
+git clone git@github.com:bagelburglar-23/epicentre-backups.git ~/epicentre-backups
+
+# 4. point the backup at the recipient + repo (public key is not a secret)
+cat > ~/epicentre-backup.env <<'ENV'
+BACKUP_AGE_RECIPIENT=age1...        # the "Public key" from step 2
+BACKUP_REPO_DIR=/home/claude/epicentre-backups
+ENV
+chmod 600 ~/epicentre-backup.env
+
+# 5. start it and prove tonight's run will work
+systemctl --user enable --now epicentre-backup.timer
+systemctl --user start epicentre-backup.service     # run once now
+journalctl --user -u epicentre-backup -n 20 --no-pager
+```
+
+### Restore
+
+Decrypt on whatever machine does the restore (needs the secret key from the
+password manager), then follow *Data → Restore* in the Emergency Recovery
+Manual:
+
+```bash
+age -d -i epicentre-age.key -o epicentre.db epicentre-2026-11-01.db.age
+```
+
+The backup repo's git history keeps every daily forever, so it grows over
+time; pruning old history is a backlog item, not urgent for a small DB.
 
 ## Commands
 
@@ -44,6 +112,7 @@ copy it back here.
 systemctl --user status epicentre epicentre-preview claude-rc
 journalctl --user -u epicentre -n 100 --no-pager
 journalctl --user -u claude-rc -n 50 --no-pager
+journalctl --user -u epicentre-backup -n 20 --no-pager
 systemctl --user list-timers
 tailscale serve status
 ```

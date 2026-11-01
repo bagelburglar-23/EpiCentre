@@ -35,6 +35,17 @@ jobs:
             npm run build
             node scripts/record-deploy.mjs production "$NEXT_PUBLIC_COMMIT_SHA"
             systemctl --user restart epicentre
+            # Make the repo the source of truth for systemd user units:
+            # copy them into place and reload, so a unit/timer added or
+            # changed in deploy/systemd-user/ goes live on merge without SSH.
+            # (Running units keep running across a daemon-reload; nothing is
+            # restarted here except what this job already restarted above.)
+            cp deploy/systemd-user/*.service deploy/systemd-user/*.timer ~/.config/systemd/user/
+            systemctl --user daemon-reload
+            # Idempotent: ensures the nightly backup timer is scheduled.
+            # Until bootstrap (age key + backup repo) is done, the job it
+            # runs logs "not configured" and exits 0 - see deploy/README.md.
+            systemctl --user enable --now epicentre-backup.timer
 
       - name: Reset UAT to match main (so it goes grey)
         uses: appleboy/ssh-action@v1
