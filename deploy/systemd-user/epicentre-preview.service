@@ -1,0 +1,14 @@
+[Unit]
+Description=EpiCentre (preview)
+
+[Service]
+Type=simple
+WorkingDirectory=/home/claude/epicentre-preview
+EnvironmentFile=-/home/claude/epicentre-preview.env
+Environment=PORT=3001
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

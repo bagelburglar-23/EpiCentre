@@ -1,0 +1,14 @@
+[Unit]
+Description=EpiCentre
+
+[Service]
+Type=simple
+WorkingDirectory=/home/claude/epicentre
+EnvironmentFile=-/home/claude/epicentre.env
+Environment=PORT=3000
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

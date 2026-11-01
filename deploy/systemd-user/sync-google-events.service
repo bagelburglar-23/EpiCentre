@@ -1,0 +1,8 @@
+[Unit]
+Description=EpiCentre - pull Google Calendar events into the local cache
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/claude/epicentre
+EnvironmentFile=-/home/claude/epicentre.env
+ExecStart=/usr/bin/node scripts/sync-google-events.mjs
