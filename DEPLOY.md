@@ -1,3 +1,7 @@
+> **Superseded 2026-11-01.** This describes the original plan (root, `/opt`,
+> `git push vps`), which never ran in prod. The real setup is in
+> [`deploy/README.md`](deploy/README.md).
+
 # Deploy
 
 One-time VPS setup, then an ordinary `git push` deploys every time after.

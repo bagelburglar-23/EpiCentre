@@ -137,6 +137,27 @@ module. If any of them starts costing real time, stop and say so.
 
 ---
 
+## Mobile workflow (Remote Control on the VPS)
+
+Lucas usually drives Claude from his iPhone (Claude app → Code →
+**EpiCentre**). The session runs on the VPS (`claude-rc.service`) in a
+per-session git worktree of `~/work/EpiCentre`.
+
+- **Branch** `feature/<slug>` off `origin/main`; push with
+  `git push -u origin feature/<slug>`. That auto-opens the PR and deploys
+  UAT (`:8443`). Lucas reviews on UAT and merges in the GitHub app.
+  **Never push `main`** — the `protect-main` ruleset blocks it anyway.
+- **Never edit** `~/epicentre`, `~/epicentre-preview` (CI hard-resets
+  them), `~/shared/` (the live DB) or `~/*.env`. Deny rules in
+  `~/.claude/settings.json` enforce most of this.
+- **UAT shares prod's database.** Test rows set `is_test = 1`; schema
+  changes are additive only.
+- **Every PR updates the "Now" block** at the top of `state/threads.md` —
+  it is how the next session, on any device, resumes.
+- **He is on a phone:** short replies; end with the UAT link and exactly
+  what to check.
+- VPS layout and commands: `deploy/README.md`.
+
 ## Operating context
 
 | window | local time | available |

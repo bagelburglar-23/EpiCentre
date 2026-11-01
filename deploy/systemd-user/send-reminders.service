@@ -1,0 +1,8 @@
+[Unit]
+Description=EpiCentre - send due to-do reminders via Telegram
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/claude/epicentre
+EnvironmentFile=-/home/claude/epicentre.env
+ExecStart=/usr/bin/node scripts/send-due-reminders.mjs

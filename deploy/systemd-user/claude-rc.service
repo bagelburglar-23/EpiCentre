@@ -1,0 +1,15 @@
+[Unit]
+Description=Claude Code Remote Control server (EpiCentre workspace)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/work/EpiCentre
+Environment=PATH=%h/.npm-global/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/.npm-global/bin/claude remote-control --name EpiCentre --spawn worktree --permission-mode acceptEdits
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=default.target

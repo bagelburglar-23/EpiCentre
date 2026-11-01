@@ -66,3 +66,9 @@ Not before Phase B, one at a time.
 ## New
 
 <!-- add below -->
+- [2026-11-01] Separate Linux account for the VPS Claude session — it shares `claude`, which can read prod secrets and the DB; deny rules are guardrails, not a boundary
+- [2026-11-01] Promote "Tailnet-only SSH": root password login works on the public IP
+- [2026-11-01] Decide public vs private repo — public exposes VPS IP/hostname; private loses free rulesets
+- [2026-11-01] Telegram reminders fire 09:00 UTC = 17:00 HKT, not the 16:00 convention
+- [2026-11-01] `claude-rc` redraws its status into the user journal every few seconds — harmless, noisy
+- [2026-11-01] Services start via `npm run start` → "Failed to kill control group" warnings on restart; running `node` directly would avoid them

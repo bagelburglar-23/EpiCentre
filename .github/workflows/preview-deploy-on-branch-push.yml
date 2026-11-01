@@ -2,7 +2,7 @@ name: preview-deploy-on-branch-push
 
 on:
   push:
-    branches: ["feature/**"]
+    branches: ["feature/**", "claude/**"]
 
 concurrency:
   group: epicentre-deploy

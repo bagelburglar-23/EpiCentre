@@ -7,6 +7,23 @@ a task list can't represent.
 
 ---
 
+## Now — resume here
+
+**Updated:** 2026-11-01 · **By:** laptop session → first VPS Remote Control session
+
+- **State:** prod + UAT healthy. Mobile pipeline live: iPhone Claude app →
+  VPS `claude-rc` → `feature/*` push → UAT → merge in the GitHub app → prod.
+- **In flight:** `feature/mobile-workflow` — real VPS deploy docs
+  (`deploy/README.md`), CLAUDE.md mobile section, this block.
+- **Next:** (1) nightly SQLite backup — the most important open Phase A
+  item, now that real data lives in one DB shared by prod and UAT;
+  (2) optional: Termius break-glass SSH key on the iPhone.
+- **Open, not yet decided:** Phase A as written (ledger) vs what was built
+  (to-do, Cal+) — `ROADMAP.md` not updated; Telegram reminders vs D-12; the
+  shared prod/UAT DB and the OAuth API routes have no D-entry.
+
+---
+
 ## T-01 — Desk location confirmation
 **Status:** open · **Blocks:** ledger admin entries only
 
@@ -163,6 +180,30 @@ other, either order is fine; both are already based on current `main`.
   module instead (Lucas's call, documented in conversation).
 - Nightly SQLite backup cron (ARCHITECTURE.md's original plan) — more
   pressing now that real todos/events data exists in the shared DB.
+
+---
+
+## T-06 — Device handoff + mobile pipeline (2026-11-01)
+**Status:** done once `feature/mobile-workflow` merges
+
+- "Server keeps shutting down" was not the server. Journals: prod + UAT ran
+  continuously 27 Oct → 1 Nov, linger already on, no reboot since 22 Oct.
+  Cause: the iPhone's Tailscale was off. Fix: Tailscale *VPN On Demand*;
+  iOS allows only one VPN at a time.
+- Renaming the VPS in Tailscale changes the app URL (machine name = MagicDNS
+  name). Was done and reverted the same night — don't repeat casually.
+- A stray `claude` in tmux `main` (started 25 Oct in the **prod** checkout,
+  never used) was stopped. VPS Claude was on a `claude setup-token`
+  (inference-only), sourced from `~/.profile`; replaced with a full
+  `claude auth login` (Pro), which Remote Control requires.
+- The VPS GitHub deploy key has write access; ruleset `protect-main` is
+  what keeps it off `main`.
+- Repo is public; no secrets in tracked files (checked 2026-11-01).
+- T-05 was ~6 PRs stale (#8–#14 unrecorded: auth gate, GCal sync v1 +
+  multi-calendar, password change v2, Month/Week/Day views). The previous
+  session's transcript exists only on the other PC (`~/.claude/projects/`).
+- Laptop now has Tailscale, SSH key `lucas-laptop`, `~/.ssh/config` aliases
+  `epic` / `epic-root`. Node not installed there yet.
 
 ---
 
