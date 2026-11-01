@@ -1,7 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { addTodo, toggleTodo, deleteTodo } from "@/lib/todos";
+import { addTodo, updateTodo, toggleTodo, deleteTodo } from "@/lib/todos";
+
+export async function updateTodoAction(
+  id: number,
+  title: string,
+  details: string,
+  dueDate: string
+) {
+  updateTodo(id, title, details, dueDate);
+  revalidatePath("/");
+}
 
 export async function addTodoAction(
   title: string,

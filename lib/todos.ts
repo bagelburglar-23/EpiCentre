@@ -69,6 +69,28 @@ export function addTodo(
     .run(trimmedTitle, details.trim() || null, dueDate || null, forcedTest ? 1 : 0);
 }
 
+// Idempotent: same input twice leaves the same row. If the due date
+// changes, reminder_sent is reset so the Telegram reminder fires for the
+// new date instead of being suppressed by the old one having fired.
+export function updateTodo(
+  id: number,
+  title: string,
+  details: string,
+  dueDate: string
+): void {
+  const trimmedTitle = title.trim();
+  if (!trimmedTitle) return;
+  getDb()
+    .prepare(
+      `UPDATE todos
+       SET text = ?, details = ?,
+           reminder_sent = CASE WHEN due_date IS ? THEN reminder_sent ELSE 0 END,
+           due_date = ?, updated_at = datetime('now')
+       WHERE id = ?`
+    )
+    .run(trimmedTitle, details.trim() || null, dueDate || null, dueDate || null, id);
+}
+
 export function toggleTodo(id: number): void {
   getDb()
     .prepare(`UPDATE todos SET done = NOT done, updated_at = datetime('now') WHERE id = ?`)

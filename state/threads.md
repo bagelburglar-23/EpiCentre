@@ -9,13 +9,15 @@ a task list can't represent.
 
 ## Now — resume here
 
-**Updated:** 2026-11-01 · **By:** laptop session → first VPS Remote Control session
+**Updated:** 2026-11-01 · **By:** VPS Remote Control session
 
-- **State:** prod + UAT healthy. Mobile pipeline live: iPhone Claude app →
-  VPS `claude-rc` → `feature/*` push → UAT → merge in the GitHub app → prod.
-- **In flight:** `feature/mobile-workflow` — real VPS deploy docs
-  (`deploy/README.md`), CLAUDE.md mobile section, this block; preview
-  workflow now requests Lucas's review after UAT deploys (phone push).
+- **State:** prod + UAT healthy. Mobile pipeline live and tested (#15):
+  iPhone Claude app → VPS `claude-rc` → `feature/*` push → UAT → review
+  request → merge in the GitHub app → prod.
+- **In flight:** `feature/todo-edit-description` — to-do details render
+  `- ` lines as bullets, details collapsed behind ▸ by default, tap a title
+  to edit title/details/due date (`updateTodo` in `lib/todos.ts`; changing
+  the due date re-arms the Telegram reminder).
 - **Next:** (1) nightly SQLite backup — the most important open Phase A
   item, now that real data lives in one DB shared by prod and UAT;
   (2) optional: Termius break-glass SSH key on the iPhone.
