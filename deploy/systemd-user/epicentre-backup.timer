@@ -1,0 +1,11 @@
+[Unit]
+Description=Run EpiCentre DB backup daily
+
+[Timer]
+# 18:00 UTC = 02:00 HKT - a quiet hour, and clear of the 09:00 UTC reminder.
+OnCalendar=*-*-* 18:00:00
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

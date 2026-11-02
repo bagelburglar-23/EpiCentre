@@ -1,0 +1,15 @@
+[Unit]
+Description=EpiCentre - nightly encrypted off-VPS database backup
+
+[Service]
+Type=oneshot
+# Run from the prod checkout so `node` finds better-sqlite3 in its node_modules.
+WorkingDirectory=/home/claude/epicentre
+# DATABASE_PATH comes from the app env; the backup-specific config
+# (BACKUP_AGE_RECIPIENT, BACKUP_REPO_DIR) lives in its own file. Both are
+# optional (leading -): with neither set, the script logs and exits 0.
+EnvironmentFile=-/home/claude/epicentre.env
+EnvironmentFile=-/home/claude/epicentre-backup.env
+# ~/.local/bin is where `age` is installed (see deploy/README.md "Backups").
+Environment=PATH=/home/claude/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/node scripts/backup-db.mjs
