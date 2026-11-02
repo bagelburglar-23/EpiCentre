@@ -57,6 +57,27 @@ export function getDb(): Database.Database {
     }
   }
 
+  // Lists: the To-Do module became multi-list ("Lists"). A `lists` row
+  // groups todos; `todos.list_id` is a nullable reference to it. NULL means
+  // the virtual "Inbox", so every todo that existed before this change keeps
+  // showing with no data migration. is_test follows the shared-DB
+  // convention (prod hides is_test = 1). Additive only.
+  instance.exec(`
+    CREATE TABLE IF NOT EXISTS lists (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      is_test INTEGER NOT NULL DEFAULT 0,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  try {
+    instance.exec(`ALTER TABLE todos ADD COLUMN list_id INTEGER`);
+  } catch (e) {
+    if (!(e instanceof Error) || !e.message.includes("duplicate column")) throw e;
+  }
+
   // Cal+ base. gcal_event_id/synced_at are forward-looking columns for the
   // not-yet-built Google Calendar sync (see lib/google-calendar.ts) - added
   // now, nullable, so that feature doesn't need its own schema migration
