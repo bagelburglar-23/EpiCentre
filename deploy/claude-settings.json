@@ -1,0 +1,44 @@
+{
+  "theme": "dark",
+  "inputNeededNotifEnabled": true,
+  "agentPushNotifEnabled": true,
+  "permissions": {
+    "allow": [
+      "Bash(npm ci)",
+      "Bash(npm run build)",
+      "Bash(npm run lint)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git switch *)",
+      "Bash(git checkout -b *)",
+      "Bash(git fetch *)",
+      "Bash(git pull *)",
+      "Bash(git push -u origin feature/*)",
+      "Bash(git push origin feature/*)"
+    ],
+    "deny": [
+      "Read(~/epicentre.env)",
+      "Read(~/epicentre-preview.env)",
+      "Read(~/.claude_oauth_token)",
+      "Read(~/shared/**)",
+      "Edit(~/shared/**)",
+      "Edit(~/epicentre/**)",
+      "Edit(~/epicentre-preview/**)",
+      "Edit(~/.ssh/**)",
+      "Bash(git push * main)",
+      "Bash(git push * main *)",
+      "Bash(git push * HEAD:main)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(systemctl *)",
+      "Bash(sqlite3 *)",
+      "Bash(* ~/epicentre.env*)",
+      "Bash(* ~/epicentre-preview.env*)",
+      "Bash(* /home/claude/epicentre.env*)",
+      "Bash(* /home/claude/epicentre-preview.env*)"
+    ]
+  }
+}

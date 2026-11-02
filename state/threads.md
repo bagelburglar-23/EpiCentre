@@ -9,20 +9,23 @@ a task list can't represent.
 
 ## Now — resume here
 
-**Updated:** 2026-11-01 · **By:** VPS Remote Control session
+**Updated:** 2026-11-02 · **By:** VPS Remote Control session
 
-- **State:** prod + UAT healthy. Mobile pipeline live and tested (#15):
-  iPhone Claude app → VPS `claude-rc` → `feature/*` push → UAT → review
-  request → merge in the GitHub app → prod.
-- **In flight:** `feature/db-backup` — nightly encrypted off-VPS backup
-  (`scripts/backup-db.mjs` + `epicentre-backup.timer`), age-encrypted to a
-  private `epicentre-backups` repo; prod deploy now installs systemd units
-  from `deploy/systemd-user/`. **Off until bootstrapped** (age key + backup
-  repo) — see `deploy/README.md` "Backups". To-do edit shipped (#16).
-- **Next:** (1) **bootstrap the backup** — install `age`, make the keypair
-  (secret key → password manager only), create private `epicentre-backups`,
-  write `~/epicentre-backup.env`; (2) Termius break-glass SSH key on iPhone;
-  (3) let Claude read service status/logs (loosen deny rules).
+- **State:** prod + UAT healthy. Mobile pipeline live end-to-end (iPhone/PC
+  Claude → VPS `claude-rc` → `feature/*` → UAT → merge → prod). **Nightly
+  encrypted backups live** (bootstrapped 2026-11-02): `epicentre-backup.timer`
+  → age-encrypted → private `EpiCentre-Backup` repo at 18:00 UTC; 14 local
+  plaintext dailies in `~/backups`. Secret age key is in Lucas's password
+  manager only. Backups #17, to-do edit #16, mobile notif #15 all merged.
+- **In flight:** `feature/housekeeping-reminders` — Telegram reminder time
+  09:00→08:00 UTC (16:00 HKT convention); `~/.claude/settings.json` copied to
+  `deploy/claude-settings.json` (guardrails survive a rebuild); this block.
+- **Next:** (1) restore test on the PC — prove the age key decrypts a backup;
+  (2) loosen deny rules so Claude can read service status/logs; optional
+  Termius phone break-glass (PC SSH already works); (3) **needs Lucas's
+  rulings** — D-entries for the shared prod/UAT DB, the OAuth API routes, and
+  Telegram vs D-12, then update `ROADMAP.md`; (4) OAuth hostname → env var;
+  node-direct service start to kill the "control group" warning.
 - **Open, not yet decided:** Phase A as written (ledger) vs what was built
   (to-do, Cal+) — `ROADMAP.md` not updated; Telegram reminders vs D-12; the
   shared prod/UAT DB and the OAuth API routes have no D-entry.

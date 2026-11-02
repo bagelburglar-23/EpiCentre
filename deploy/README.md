@@ -10,7 +10,7 @@ Supersedes `DEPLOY.md`.
 | UAT | checkout `~/epicentre-preview` · `epicentre-preview.service` · port 3001 · `https://srv1648855.tail523e0b.ts.net:8443/` |
 | Database | `~/shared/epicentre.db` — **one file shared by prod and UAT** (WAL). `is_test = 1` rows are hidden from prod. Schema changes must be additive. |
 | Secrets | `~/epicentre.env`, `~/epicentre-preview.env` (chmod 600, never in git) |
-| Timers | `sync-google-events.timer` every 30 min · `send-reminders.timer` daily 09:00 **UTC** (= 17:00 HKT) |
+| Timers | `sync-google-events.timer` every 30 min · `send-reminders.timer` daily 08:00 **UTC** (= 16:00 HKT) · `epicentre-backup.timer` daily 18:00 UTC |
 | Claude | `claude-rc.service` — Remote Control server in `~/work/EpiCentre`, one git worktree per session |
 | Ingress | `tailscale serve`: `/` → 3000, `:8443` → 3001 (persistent, set with `--bg`) |
 
@@ -42,6 +42,21 @@ unit there goes live on merge (a running unit keeps running; only
 already wired into the deploy). For an urgent hand-edit on the box, change
 the live file, `daemon-reload && restart <unit>`, then copy it back here or
 the next deploy reverts it.
+
+## Claude guardrails
+
+The deny/allow rules that keep the Claude session off prod secrets, the DB
+and `main` live in `~/.claude/settings.json` (user-level, not in git by
+nature). A reference copy is kept at `deploy/claude-settings.json`. After a
+VPS rebuild, restore them before running Claude there:
+
+```bash
+mkdir -p ~/.claude && cp deploy/claude-settings.json ~/.claude/settings.json
+```
+
+They are guardrails, not a security boundary — the session runs as `claude`
+and could reach those files if a rule were missing. The real boundary is a
+separate Linux user (backlog).
 
 ## Backups
 
