@@ -5,8 +5,8 @@ import { useEffect, useState, type ReactNode } from "react";
 export type NavItem = {
   id: string;
   label: string;
-  // Sidebar glyph. Falls back to the label's first letter; set it where two
-  // labels would otherwise collide (EpiTrader / EpiPlanner both -> "E").
+  // Sidebar/bottom-nav glyph. Falls back to the label's first letter; set it
+  // where two labels would otherwise collide (EpiTrader / EpiPlanner -> "E").
   short?: string;
   content: ReactNode;
 };
@@ -80,7 +80,7 @@ export default function Shell({ items }: { items: NavItem[] }) {
   // Native HTML5 drag-and-drop (no library - this is the only place in the
   // app that needs it) - draggable + onDragStart/onDragOver/onDrop on the
   // tab bar's divs below. Reordering just rewrites openTabs, which the
-  // existing save effect already persists to localStorage.
+  // existing save effect already persists to localStorage. Desktop only.
   function reorderTab(targetId: string) {
     if (!draggedId || draggedId === targetId) return;
     setOpenTabs((prev) => {
@@ -92,11 +92,15 @@ export default function Shell({ items }: { items: NavItem[] }) {
   }
 
   const byId = Object.fromEntries(items.map((i) => [i.id, i]));
+  const glyph = (item: NavItem) => item.short ?? item.label.slice(0, 1);
 
+  // h-[100dvh] (dynamic viewport height), not h-screen: on mobile browsers
+  // 100vh includes the address bar's space and would push the bottom nav
+  // off-screen. The column flips to a row on sm+ (desktop).
   return (
-    <div className="flex h-screen w-full">
-      {/* Sidebar - always visible, lists everything available */}
-      <nav className="flex w-11 flex-col items-center gap-1 border-r border-accent-dim bg-black py-2">
+    <div className="flex h-[100dvh] w-full flex-col sm:flex-row">
+      {/* Desktop sidebar - replaced by the bottom nav on mobile */}
+      <nav className="hidden w-11 flex-col items-center gap-1 border-r border-accent-dim bg-black py-2 sm:flex">
         {items.map((item) => (
           <button
             key={item.id}
@@ -108,17 +112,18 @@ export default function Shell({ items }: { items: NavItem[] }) {
                 : "text-foreground/60 hover:bg-accent-dim hover:text-accent-bright"
             }`}
           >
-            {item.short ?? item.label.slice(0, 1)}
+            {glyph(item)}
           </button>
         ))}
       </nav>
 
-      <div className="flex flex-1 flex-col">
-        {/* Tab bar - VS Code style, client-only state persisted to
-            localStorage (see state/decisions.md): closing a tab just
-            removes it from this list, nothing is destroyed server-side. */}
+      <div className="flex min-h-0 flex-1 flex-col">
+        {/* Desktop tab bar - VS Code style, client-only state persisted to
+            localStorage (see state/decisions.md). Hidden on mobile, where
+            the bottom nav is the switcher. Scrolls horizontally if the open
+            tabs overflow. */}
         {openTabs.length > 0 && (
-          <div className="flex items-stretch border-b border-accent-dim bg-black">
+          <div className="hidden items-stretch overflow-x-auto border-b border-accent-dim bg-black sm:flex">
             {openTabs.map((id) => (
               <div
                 key={id}
@@ -131,7 +136,7 @@ export default function Shell({ items }: { items: NavItem[] }) {
                   reorderTab(id);
                 }}
                 onClick={() => setActiveTab(id)}
-                className={`flex cursor-pointer items-center gap-1.5 border-r border-accent-dim px-2.5 py-1.5 font-mono text-xs ${
+                className={`flex shrink-0 cursor-pointer items-center gap-1.5 border-r border-accent-dim px-2.5 py-1.5 font-mono text-xs ${
                   draggedId === id ? "opacity-40" : ""
                 } ${
                   activeTab === id
@@ -155,15 +160,44 @@ export default function Shell({ items }: { items: NavItem[] }) {
           </div>
         )}
 
-        <main className="flex-1 overflow-auto bg-background">
+        <main className="min-h-0 flex-1 overflow-auto bg-background">
           {activeTab ? (
             byId[activeTab]?.content
           ) : (
-            <div className="flex h-full items-center justify-center font-mono text-xs text-foreground/30">
-              Select something from the sidebar to get started.
+            <div className="flex h-full items-center justify-center p-6 text-center font-mono text-xs text-foreground/30">
+              Select something to get started.
             </div>
           )}
         </main>
+
+        {/* Mobile bottom nav - app-style switcher, only on narrow screens.
+            padding-bottom clears the iOS home indicator (safe-area inset). */}
+        <nav
+          className="flex items-stretch overflow-x-auto border-t border-accent-dim bg-black sm:hidden"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
+          {items.map((item) => {
+            const active = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => openTab(item.id)}
+                className={`flex flex-1 shrink-0 basis-0 flex-col items-center justify-center gap-0.5 py-1.5 font-mono text-[10px] ${
+                  active ? "text-accent-bright" : "text-foreground/50"
+                }`}
+              >
+                <span
+                  className={`flex h-7 w-7 items-center justify-center rounded text-xs font-medium ${
+                    active ? "bg-accent text-black" : ""
+                  }`}
+                >
+                  {glyph(item)}
+                </span>
+                <span className="max-w-[4.5rem] truncate">{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
       </div>
     </div>
   );
