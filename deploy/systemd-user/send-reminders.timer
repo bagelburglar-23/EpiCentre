@@ -2,7 +2,10 @@
 Description=Run send-reminders daily
 
 [Timer]
-OnCalendar=*-*-* 09:00:00
+# 08:00 UTC = 16:00 HKT - lands in the only window Lucas sees alerts (the
+# ~15:30-18:00 gap between Tokyo equities and evening derivatives). Was
+# 09:00 UTC (17:00 HKT); moved to match the 16:00-local alert convention.
+OnCalendar=*-*-* 08:00:00
 Persistent=true
 
 [Install]
