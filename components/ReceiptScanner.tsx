@@ -3,6 +3,36 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { parseReceipt, type ParsedItem } from "@/lib/receipt-parse";
 
+// Lightly clean an image for OCR: upscale small photos, greyscale, and bump
+// contrast. This is the main lever on tesseract's accuracy for receipts
+// (printed receipts especially). Falls back to the raw file if anything fails.
+async function preprocess(file: Blob): Promise<HTMLCanvasElement | Blob> {
+  try {
+    const bmp = await createImageBitmap(file);
+    const maxDim = Math.max(bmp.width, bmp.height);
+    const scale = maxDim < 1200 ? 2 : maxDim > 2400 ? 2400 / maxDim : 1;
+    const w = Math.round(bmp.width * scale);
+    const h = Math.round(bmp.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bmp, 0, 0, w, h);
+    const img = ctx.getImageData(0, 0, w, h);
+    const d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      let g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      g = (g - 128) * 1.25 + 128; // contrast
+      d[i] = d[i + 1] = d[i + 2] = g < 0 ? 0 : g > 255 ? 255 : g;
+    }
+    ctx.putImageData(img, 0, 0);
+    return canvas;
+  } catch {
+    return file;
+  }
+}
+
 // Receipt photo -> items, entirely in the browser via tesseract.js (no AI
 // tokens, no server). tesseract.js is imported dynamically so its ~couple-MB
 // core + language data load only when you actually scan (first scan fetches
@@ -10,41 +40,51 @@ import { parseReceipt, type ParsedItem } from "@/lib/receipt-parse";
 // so the result is shown for review before anything is added.
 export default function ReceiptScanner({
   onAdd,
+  defaultTax,
 }: {
-  onAdd: (items: ParsedItem[]) => void;
+  onAdd: (items: ParsedItem[], taxPercent: string) => void;
+  defaultTax: string;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [candidates, setCandidates] = useState<ParsedItem[] | null>(null);
   const [picked, setPicked] = useState<Set<number>>(new Set());
+  const [batchTax, setBatchTax] = useState(defaultTax);
 
-  const handleFile = useCallback(async (file: Blob) => {
-    setScanning(true);
-    setProgress(0);
-    try {
-      const { createWorker } = await import("tesseract.js");
-      const worker = await createWorker("eng", 1, {
-        logger: (m: { status: string; progress: number }) => {
-          if (m.status === "recognizing text") {
-            setProgress(Math.round(m.progress * 100));
-          }
-        },
-      });
-      const {
-        data: { text },
-      } = await worker.recognize(file);
-      await worker.terminate();
-      const items = parseReceipt(text);
-      setCandidates(items);
-      setPicked(new Set(items.map((_, i) => i)));
-    } catch (e) {
-      console.error("Receipt OCR failed:", e);
-      alert("Couldn't read that image. You can still add items by hand.");
-    } finally {
-      setScanning(false);
-    }
-  }, []);
+  const handleFile = useCallback(
+    async (file: Blob) => {
+      setScanning(true);
+      setProgress(0);
+      try {
+        const input = await preprocess(file);
+        const { createWorker, PSM } = await import("tesseract.js");
+        const worker = await createWorker("eng", 1, {
+          logger: (m: { status: string; progress: number }) => {
+            if (m.status === "recognizing text") {
+              setProgress(Math.round(m.progress * 100));
+            }
+          },
+        });
+        // Single column of text of varying sizes - fits receipts.
+        await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_COLUMN });
+        const {
+          data: { text },
+        } = await worker.recognize(input);
+        await worker.terminate();
+        const items = parseReceipt(text);
+        setCandidates(items);
+        setPicked(new Set(items.map((_, i) => i)));
+        setBatchTax(defaultTax);
+      } catch (e) {
+        console.error("Receipt OCR failed:", e);
+        alert("Couldn't read that image. You can still add items by hand.");
+      } finally {
+        setScanning(false);
+      }
+    },
+    [defaultTax]
+  );
 
   // Desktop: paste an image from the clipboard (Cmd/Ctrl+V anywhere, or the
   // Paste button). Screenshot a receipt and paste it - no file dialog.
@@ -100,7 +140,7 @@ export default function ReceiptScanner({
 
   function addPicked() {
     const chosen = (candidates ?? []).filter((_, i) => picked.has(i));
-    if (chosen.length) onAdd(chosen);
+    if (chosen.length) onAdd(chosen, batchTax);
     setCandidates(null);
   }
 
@@ -167,6 +207,17 @@ export default function ReceiptScanner({
                 <p className="mb-2 text-xs text-foreground/50">
                   Untick anything wrong; fix names/prices before adding.
                 </p>
+                <label className="mb-2 flex items-center gap-2 text-xs text-foreground/70">
+                  Tax&nbsp;% for this receipt
+                  <input
+                    inputMode="decimal"
+                    value={batchTax}
+                    onChange={(e) => setBatchTax(e.target.value)}
+                    placeholder="0"
+                    className="w-14 rounded border border-accent-dim bg-black px-1.5 py-0.5 text-right text-foreground outline-none focus:border-accent"
+                  />
+                  <span className="text-foreground/40">applies to all</span>
+                </label>
                 <div className="mb-3 max-h-80 space-y-1 overflow-auto">
                   {candidates.map((c, i) => (
                     <label key={i} className="flex items-center gap-2 text-sm">
