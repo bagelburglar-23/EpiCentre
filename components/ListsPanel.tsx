@@ -14,7 +14,7 @@ import {
 } from "@/app/lists/actions";
 import type { Todo } from "@/lib/todos";
 import type { List } from "@/lib/lists";
-import HelpButton from "@/components/HelpButton";
+import SideRail from "@/components/SideRail";
 
 function isOverdue(dueDate: string | null, done: boolean): boolean {
   if (!dueDate || done) return false;
@@ -213,7 +213,6 @@ export default function ListsPanel({
   const [newListTest, setNewListTest] = useState(false);
   const [renamingId, setRenamingId] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const [railOpen, setRailOpen] = useState(true);
   const [deletingList, setDeletingList] = useState<number | null>(null);
   const [, startTransition] = useTransition();
 
@@ -357,24 +356,33 @@ export default function ListsPanel({
   return (
     <div className="flex h-full">
       {/* List rail */}
-      {railOpen ? (
-      <aside className="flex w-40 shrink-0 flex-col gap-1 border-r border-accent-dim bg-black p-2">
-        <div className="mb-1 flex items-center justify-between px-1">
-          <h1 className="font-mono text-sm uppercase tracking-wide text-accent-bright">
-            Lists
-          </h1>
-          <div className="flex items-center gap-1">
-            <HelpButton section="guide-lists" />
+      <SideRail
+        title="Lists"
+        helpSection="guide-lists"
+        footer={
+          creating ? (
+            <input
+              autoFocus
+              className="mt-1 w-full rounded border border-accent bg-black px-2 py-1 text-sm text-foreground outline-none"
+              placeholder="List name"
+              value={newListName}
+              onChange={(e) => setNewListName(e.target.value)}
+              onBlur={submitNewList}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submitNewList();
+                if (e.key === "Escape") setCreating(false);
+              }}
+            />
+          ) : (
             <button
-              onClick={() => setRailOpen(false)}
-              aria-label="Collapse lists"
-              title="Collapse"
-              className="rounded px-1 text-foreground/40 hover:text-accent-bright"
+              onClick={() => setCreating(true)}
+              className="mt-1 rounded px-2 py-1 text-left font-mono text-xs text-foreground/50 hover:bg-accent-dim hover:text-accent-bright"
             >
-              ‹
+              + List
             </button>
-          </div>
-        </div>
+          )
+        }
+      >
         {railItem(null, "Dump")}
         {lists.map((l) =>
           renamingId === l.id ? (
@@ -415,40 +423,7 @@ export default function ListsPanel({
             </div>
           )
         )}
-        {creating ? (
-          <input
-            autoFocus
-            className="mt-1 w-full rounded border border-accent bg-black px-2 py-1 text-sm text-foreground outline-none"
-            placeholder="List name"
-            value={newListName}
-            onChange={(e) => setNewListName(e.target.value)}
-            onBlur={submitNewList}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") submitNewList();
-              if (e.key === "Escape") setCreating(false);
-            }}
-          />
-        ) : (
-          <button
-            onClick={() => setCreating(true)}
-            className="mt-1 rounded px-2 py-1 text-left font-mono text-xs text-foreground/50 hover:bg-accent-dim hover:text-accent-bright"
-          >
-            + List
-          </button>
-        )}
-      </aside>
-      ) : (
-        <aside className="flex w-8 shrink-0 flex-col items-center border-r border-accent-dim bg-black py-2">
-          <button
-            onClick={() => setRailOpen(true)}
-            aria-label="Expand lists"
-            title="Lists"
-            className="rounded px-1 font-mono text-sm text-foreground/50 hover:text-accent-bright"
-          >
-            ›
-          </button>
-        </aside>
-      )}
+      </SideRail>
 
       {/* Items of the selected list */}
       <div className="flex flex-1 flex-col p-4">

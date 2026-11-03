@@ -13,7 +13,7 @@ import {
   type BillData,
   type BillItem,
 } from "@/lib/bill-calc";
-import HelpButton from "@/components/HelpButton";
+import SideRail from "@/components/SideRail";
 import ReceiptScanner from "@/components/ReceiptScanner";
 import type { ParsedItem } from "@/lib/receipt-parse";
 
@@ -49,7 +49,6 @@ export default function BillsPanel({
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newTest, setNewTest] = useState(false);
-  const [railOpen, setRailOpen] = useState(true);
   // Bulk delete: `selected` item ids; `selecting` only toggles the checkbox
   // column's visibility on mobile (desktop shows it always).
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -316,24 +315,45 @@ export default function BillsPanel({
   return (
     <div className="flex h-full">
       {/* Bill rail */}
-      {railOpen ? (
-      <aside className="flex w-36 shrink-0 flex-col gap-1 border-r border-accent-dim bg-black p-2">
-        <div className="mb-1 flex items-center justify-between px-1">
-          <h1 className="font-mono text-sm uppercase tracking-wide text-accent-bright">
-            Bills
-          </h1>
-          <div className="flex items-center gap-1">
-            <HelpButton section="guide-bills" />
-            <button
-              onClick={() => setRailOpen(false)}
-              aria-label="Collapse bills"
-              title="Collapse"
-              className="rounded px-1 text-foreground/40 hover:text-accent-bright"
-            >
-              ‹
-            </button>
-          </div>
-        </div>
+      <SideRail
+        title="Bills"
+        helpSection="guide-bills"
+        footer={
+          <>
+            {creating ? (
+              <input
+                autoFocus
+                className={`mt-1 ${inputCls}`}
+                placeholder="Bill name (e.g. KLC dinner)"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onBlur={submitNew}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") submitNew();
+                  if (e.key === "Escape") setCreating(false);
+                }}
+              />
+            ) : (
+              <button
+                onClick={() => setCreating(true)}
+                className="mt-1 rounded px-2 py-1 text-left font-mono text-xs text-foreground/50 hover:bg-accent-dim hover:text-accent-bright"
+              >
+                + Bill
+              </button>
+            )}
+            {isPreview && creating && (
+              <label className="flex items-center gap-1 px-1 text-[10px] text-foreground/50">
+                <input
+                  type="checkbox"
+                  checked={newTest}
+                  onChange={(e) => setNewTest(e.target.checked)}
+                />
+                test
+              </label>
+            )}
+          </>
+        }
+      >
         {bills.map((b) => (
           <div key={b.id} className="group flex items-center">
             <button
@@ -360,50 +380,7 @@ export default function BillsPanel({
             </button>
           </div>
         ))}
-        {creating ? (
-          <input
-            autoFocus
-            className={`mt-1 ${inputCls}`}
-            placeholder="Bill name (e.g. KLC dinner)"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onBlur={submitNew}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") submitNew();
-              if (e.key === "Escape") setCreating(false);
-            }}
-          />
-        ) : (
-          <button
-            onClick={() => setCreating(true)}
-            className="mt-1 rounded px-2 py-1 text-left font-mono text-xs text-foreground/50 hover:bg-accent-dim hover:text-accent-bright"
-          >
-            + Bill
-          </button>
-        )}
-        {isPreview && creating && (
-          <label className="flex items-center gap-1 px-1 text-[10px] text-foreground/50">
-            <input
-              type="checkbox"
-              checked={newTest}
-              onChange={(e) => setNewTest(e.target.checked)}
-            />
-            test
-          </label>
-        )}
-      </aside>
-      ) : (
-        <aside className="flex w-8 shrink-0 flex-col items-center border-r border-accent-dim bg-black py-2">
-          <button
-            onClick={() => setRailOpen(true)}
-            aria-label="Expand bills"
-            title="Bills"
-            className="rounded px-1 font-mono text-sm text-foreground/50 hover:text-accent-bright"
-          >
-            ›
-          </button>
-        </aside>
-      )}
+      </SideRail>
 
       {/* Editor */}
       {!billOpen ? (
