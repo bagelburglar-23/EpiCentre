@@ -15,6 +15,7 @@ import {
 } from "@/lib/bill-calc";
 import SideRail from "@/components/SideRail";
 import ReceiptScanner from "@/components/ReceiptScanner";
+import { getPref } from "@/lib/prefs";
 import type { ParsedItem } from "@/lib/receipt-parse";
 
 function uid(): string {
@@ -111,13 +112,13 @@ export default function BillsPanel({
       ),
     });
   }
-  // Tax defaults to 20%; otherwise a new item (or scanned batch) inherits the
-  // last item's rate, so you don't retype it. A scanned batch shares one rate
-  // (set once in the scan modal), then each item is individually editable.
-  const DEFAULT_TAX = "20";
+  // Tax defaults to the Settings → EpiSplit rate (20% out of the box);
+  // otherwise a new item (or scanned batch) inherits the last item's rate, so
+  // you don't retype it. A scanned batch shares one rate (set in the scan
+  // modal), then each item is individually editable.
   const lastTax = () => {
     const t = buffer.items[buffer.items.length - 1]?.taxPercent;
-    return t && t.trim() ? t : DEFAULT_TAX;
+    return t && t.trim() ? t : getPref("episplit.defaultTax", "20");
   };
   function addItem() {
     commit({
