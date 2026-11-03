@@ -6,8 +6,11 @@ export type NavItem = {
   id: string;
   label: string;
   // Sidebar/bottom-nav glyph. Falls back to the label's first letter; set it
-  // where two labels would otherwise collide (EpiTrader / EpiPlanner -> "E").
+  // where labels would collide (all EpiX modules start "Epi" -> "E").
   short?: string;
+  // Pinned/utility item (Settings): stays fixed at the end of the nav while
+  // the other modules scroll, and gets no mobile title bar.
+  pinned?: boolean;
   content: ReactNode;
 };
 
@@ -77,10 +80,7 @@ export default function Shell({ items }: { items: NavItem[] }) {
     });
   }
 
-  // Native HTML5 drag-and-drop (no library - this is the only place in the
-  // app that needs it) - draggable + onDragStart/onDragOver/onDrop on the
-  // tab bar's divs below. Reordering just rewrites openTabs, which the
-  // existing save effect already persists to localStorage. Desktop only.
+  // Native HTML5 drag-and-drop (no library) - desktop tab bar only.
   function reorderTab(targetId: string) {
     if (!draggedId || draggedId === targetId) return;
     setOpenTabs((prev) => {
@@ -93,15 +93,42 @@ export default function Shell({ items }: { items: NavItem[] }) {
 
   const byId = Object.fromEntries(items.map((i) => [i.id, i]));
   const glyph = (item: NavItem) => item.short ?? item.label.slice(0, 1);
+  const scrollItems = items.filter((i) => !i.pinned);
+  const pinnedItems = items.filter((i) => i.pinned);
+  const activeItem = activeTab ? byId[activeTab] : null;
+  // Mobile title bar: shown for content modules, not for the pinned utility
+  // (Settings) or the empty state. When it's hidden, <main> takes the
+  // status-bar clearance itself so content never sits under the notch/clock.
+  const showTitleBar = !!activeItem && !activeItem.pinned;
 
-  // h-[100dvh] (dynamic viewport height), not h-screen: on mobile browsers
-  // 100vh includes the address bar's space and would push the bottom nav
-  // off-screen. The column flips to a row on sm+ (desktop).
+  const navButton = (item: NavItem) => {
+    const active = activeTab === item.id;
+    return (
+      <button
+        key={item.id}
+        onClick={() => openTab(item.id)}
+        className={`flex shrink-0 flex-col items-center justify-center gap-0.5 py-1.5 font-mono text-[10px] ${
+          active ? "text-accent-bright" : "text-foreground/50"
+        }`}
+      >
+        <span
+          className={`flex h-7 w-7 items-center justify-center rounded text-xs font-medium ${
+            active ? "bg-accent text-black" : ""
+          }`}
+        >
+          {glyph(item)}
+        </span>
+        <span className="max-w-[4.5rem] truncate">{item.label}</span>
+      </button>
+    );
+  };
+
   return (
     <div className="flex h-[100dvh] w-full flex-col sm:flex-row">
-      {/* Desktop sidebar - replaced by the bottom nav on mobile */}
+      {/* Desktop sidebar - replaced by the bottom nav on mobile. Pinned items
+          (Settings) sit at the bottom, as most apps place settings. */}
       <nav className="hidden w-11 flex-col items-center gap-1 border-r border-accent-dim bg-black py-2 sm:flex">
-        {items.map((item) => (
+        {scrollItems.map((item) => (
           <button
             key={item.id}
             onClick={() => openTab(item.id)}
@@ -115,13 +142,42 @@ export default function Shell({ items }: { items: NavItem[] }) {
             {glyph(item)}
           </button>
         ))}
+        {pinnedItems.length > 0 && (
+          <div className="mt-auto flex flex-col items-center gap-1">
+            {pinnedItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => openTab(item.id)}
+                title={item.label}
+                className={`flex h-8 w-8 items-center justify-center rounded font-mono text-xs font-medium ${
+                  activeTab === item.id
+                    ? "bg-accent text-black"
+                    : "text-foreground/60 hover:bg-accent-dim hover:text-accent-bright"
+                }`}
+              >
+                {glyph(item)}
+              </button>
+            ))}
+          </div>
+        )}
       </nav>
 
       <div className="flex min-h-0 flex-1 flex-col">
-        {/* Desktop tab bar - VS Code style, client-only state persisted to
-            localStorage (see state/decisions.md). Hidden on mobile, where
-            the bottom nav is the switcher. Scrolls horizontally if the open
-            tabs overflow. */}
+        {/* Mobile title bar - names the current module and, crucially, clears
+            the iOS status bar (safe-area-inset-top). Hidden on desktop. */}
+        {showTitleBar && (
+          <div
+            className="flex items-center border-b border-accent-dim bg-black px-4 sm:hidden"
+            style={{ paddingTop: "env(safe-area-inset-top)" }}
+          >
+            <span className="py-2.5 font-mono text-sm uppercase tracking-wide text-accent-bright">
+              {activeItem?.label}
+            </span>
+          </div>
+        )}
+
+        {/* Desktop tab bar - VS Code style, persisted to localStorage. Hidden
+            on mobile. Scrolls horizontally if the open tabs overflow. */}
         {openTabs.length > 0 && (
           <div className="hidden items-stretch overflow-x-auto border-b border-accent-dim bg-black sm:flex">
             {openTabs.map((id) => (
@@ -160,7 +216,12 @@ export default function Shell({ items }: { items: NavItem[] }) {
           </div>
         )}
 
-        <main className="min-h-0 flex-1 overflow-auto bg-background">
+        <main
+          className="min-h-0 flex-1 overflow-auto bg-background"
+          // When the mobile title bar is hidden (Settings / empty state),
+          // <main> clears the status bar itself. 0 on desktop (inset is 0).
+          style={{ paddingTop: showTitleBar ? undefined : "env(safe-area-inset-top)" }}
+        >
           {activeTab ? (
             byId[activeTab]?.content
           ) : (
@@ -170,33 +231,25 @@ export default function Shell({ items }: { items: NavItem[] }) {
           )}
         </main>
 
-        {/* Mobile bottom nav - app-style switcher, only on narrow screens.
-            padding-bottom clears the iOS home indicator (safe-area inset). */}
+        {/* Mobile bottom nav - the EpiX modules scroll; the pinned utility
+            (Settings, ☰) stays fixed at the right. padding clears the iOS
+            home indicator. */}
         <nav
-          className="flex items-stretch overflow-x-auto border-t border-accent-dim bg-black sm:hidden"
+          className="flex items-stretch border-t border-accent-dim bg-black sm:hidden"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
-          {items.map((item) => {
-            const active = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => openTab(item.id)}
-                className={`flex flex-1 shrink-0 basis-0 flex-col items-center justify-center gap-0.5 py-1.5 font-mono text-[10px] ${
-                  active ? "text-accent-bright" : "text-foreground/50"
-                }`}
-              >
-                <span
-                  className={`flex h-7 w-7 items-center justify-center rounded text-xs font-medium ${
-                    active ? "bg-accent text-black" : ""
-                  }`}
-                >
-                  {glyph(item)}
-                </span>
-                <span className="max-w-[4.5rem] truncate">{item.label}</span>
-              </button>
-            );
-          })}
+          <div className="flex flex-1 items-stretch gap-1 overflow-x-auto px-1">
+            {scrollItems.map((item) => (
+              <div key={item.id} className="w-[4.5rem] shrink-0">
+                {navButton(item)}
+              </div>
+            ))}
+          </div>
+          {pinnedItems.map((item) => (
+            <div key={item.id} className="shrink-0 border-l border-accent-dim">
+              {navButton(item)}
+            </div>
+          ))}
         </nav>
       </div>
     </div>
