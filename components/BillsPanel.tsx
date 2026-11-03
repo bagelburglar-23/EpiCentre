@@ -14,6 +14,8 @@ import {
   type BillItem,
 } from "@/lib/bill-calc";
 import HelpButton from "@/components/HelpButton";
+import ReceiptScanner from "@/components/ReceiptScanner";
+import type { ParsedItem } from "@/lib/receipt-parse";
 
 function uid(): string {
   try {
@@ -111,6 +113,23 @@ export default function BillsPanel({
       items: [
         ...buffer.items,
         { id: uid(), name: "", cost: "", taxPercent: "", shares: {} },
+      ],
+    });
+  }
+  // Items read off a receipt photo (ReceiptScanner): appended with no tax/
+  // shares set yet - the user fills those in the grid.
+  function addScanned(scanned: ParsedItem[]) {
+    commit({
+      ...buffer,
+      items: [
+        ...buffer.items,
+        ...scanned.map((s) => ({
+          id: uid(),
+          name: s.name,
+          cost: s.cost,
+          taxPercent: "",
+          shares: {},
+        })),
       ],
     });
   }
@@ -294,6 +313,7 @@ export default function BillsPanel({
             >
               + Item
             </button>
+            <ReceiptScanner onAdd={addScanned} />
             <span className="font-mono text-[10px] text-foreground/40">
               {dirty ? "saving…" : "saved"}
             </span>
