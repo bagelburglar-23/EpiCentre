@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { parseReceipt, type ParsedItem } from "@/lib/receipt-parse";
 
 // Receipt photo -> items, entirely in the browser via tesseract.js (no AI
@@ -19,7 +19,7 @@ export default function ReceiptScanner({
   const [candidates, setCandidates] = useState<ParsedItem[] | null>(null);
   const [picked, setPicked] = useState<Set<number>>(new Set());
 
-  async function handleFile(file: File) {
+  const handleFile = useCallback(async (file: Blob) => {
     setScanning(true);
     setProgress(0);
     try {
@@ -44,6 +44,45 @@ export default function ReceiptScanner({
     } finally {
       setScanning(false);
     }
+  }, []);
+
+  // Desktop: paste an image from the clipboard (Cmd/Ctrl+V anywhere, or the
+  // Paste button). Screenshot a receipt and paste it - no file dialog.
+  useEffect(() => {
+    function onPaste(e: ClipboardEvent) {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const it of items) {
+        if (it.type.startsWith("image/")) {
+          const file = it.getAsFile();
+          if (file) {
+            e.preventDefault();
+            handleFile(file);
+            return;
+          }
+        }
+      }
+    }
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [handleFile]);
+
+  async function pasteFromClipboard() {
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const imageType = item.types.find((t) => t.startsWith("image/"));
+        if (imageType) {
+          handleFile(await item.getType(imageType));
+          return;
+        }
+      }
+      alert("No image in the clipboard — copy a receipt image first, then Paste.");
+    } catch {
+      alert(
+        "Couldn't read the clipboard. Copy an image, then press Cmd/Ctrl+V, or allow clipboard access."
+      );
+    }
   }
 
   function toggle(i: number) {
@@ -67,11 +106,11 @@ export default function ReceiptScanner({
 
   return (
     <>
+      {/* No capture attr -> mobile offers Photo Library *and* Camera. */}
       <input
         ref={fileRef}
         type="file"
         accept="image/*"
-        capture="environment"
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0];
@@ -79,13 +118,32 @@ export default function ReceiptScanner({
           e.target.value = "";
         }}
       />
-      <button
-        onClick={() => fileRef.current?.click()}
-        disabled={scanning}
-        className="rounded border border-accent-dim px-2 py-1 font-mono text-xs text-foreground/70 hover:bg-accent-dim hover:text-accent-bright disabled:opacity-50"
-      >
-        {scanning ? `Scanning ${progress}%` : "Scan receipt"}
-      </button>
+      {scanning ? (
+        <button
+          disabled
+          className="rounded border border-accent-dim px-2 py-1 font-mono text-xs text-foreground/50 opacity-60"
+        >
+          Scanning {progress}%
+        </button>
+      ) : (
+        <>
+          {/* Mobile: gallery or camera via the file picker */}
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="rounded border border-accent-dim px-2 py-1 font-mono text-xs text-foreground/70 hover:bg-accent-dim hover:text-accent-bright sm:hidden"
+          >
+            Scan receipt
+          </button>
+          {/* Desktop: paste a copied image (or Cmd/Ctrl+V anywhere) */}
+          <button
+            onClick={pasteFromClipboard}
+            title="Paste a copied receipt image (or press Cmd/Ctrl+V)"
+            className="hidden rounded border border-accent-dim px-2 py-1 font-mono text-xs text-foreground/70 hover:bg-accent-dim hover:text-accent-bright sm:inline-flex"
+          >
+            Paste receipt
+          </button>
+        </>
+      )}
 
       {candidates && (
         <div
