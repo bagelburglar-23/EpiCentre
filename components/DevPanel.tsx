@@ -127,6 +127,7 @@ const C = ({ children }: { children: ReactNode }) => (
 // --- Patch trail: newest first. Descriptions of pre-#15 PRs are
 // reconstructed from the repo; the recent ones are precise. ---
 const PATCHES: { pr: number; name: string; body: ReactNode }[] = [
+  { pr: 41, name: "View-main helper + local-dev docs", body: "A bin/pull-main.sh helper (fetch + show, or --checkout to switch) and an EpiDev chapter on cloning, running, and viewing main locally — for reviewing/learning from VSCode. Doesn't change how Claude Code's session teleport works; it makes pulling main trivial." },
   { pr: 40, name: "EpiSplit range-select", body: "Shift+↑/↓ selects a range down a column (Ctrl to the edge), highlighted; Ctrl/Cmd+D then copies the top of the selection down it (set one tax on the first row, select down, fill). Delete clears a multi-cell selection, Escape clears it. Without a selection, Ctrl+D still fills the whole column." },
   { pr: 39, name: "Settings build-out", body: "Settings gets a proper sidebar (via the shared SideRail): Account (password), Appearance (text size — scales most of the UI, per-device), EpiSplit (default tax rate), Reminders (the three digest times), and About (into EpiDev). Prefs live per-device in localStorage; text size applies pre-paint so there's no flash." },
   { pr: 38, name: "Shared SideRail component", body: "Extracted the collapsible left rail (title, ? help link, collapse toggle, footer slot) into one <SideRail> used by EpiList and EpiSplit (and Settings next). Pure refactor — behaviour unchanged — so future rail tweaks land in one place for every module that uses it." },
@@ -259,6 +260,18 @@ export default function DevPanel() {
             <li><C>app/page.tsx</C> — one entry registering the tab in the Shell.</li>
           </UL>
           <P>The rule that still holds from the plan: <strong>no module imports another</strong> (D-10); shared code lives in <C>lib/</C>. Tables carry <C>created_at</C>/<C>updated_at</C> and an <C>is_test</C> flag.</P>
+        </Item>
+
+        <Item title="Working on the code (local / VSCode)">
+          <P>To read or build the code from your own machine — good for learning:</P>
+          <UL>
+            <li>Clone once: <C>git clone git@github.com:bagelburglar-23/EpiCentre.git</C></li>
+            <li>See what's shipped: <C>git fetch origin main &amp;&amp; git log --oneline origin/main</C>, or run <C>bin/pull-main.sh</C> (add <C>--checkout</C> to switch your copy to main).</li>
+            <li>Run it: <C>npm ci</C> then <C>npm run dev</C> → <C>localhost:3000</C> (needs a small <C>.env.local</C> — see <C>deploy/README.md</C>). Dev uses its own empty DB; prod data stays on the VPS.</li>
+            <li>To change something: branch off main (<C>feature/&lt;slug&gt;</C>), push → a PR opens and UAT builds. Never edit <C>main</C> directly, and never the VPS <C>~/epicentre</C> checkouts (CI resets them).</li>
+          </UL>
+          <P>In VSCode's Claude Code the session lives on a branch/worktree; to view main, pull it in a local clone as above — the "teleport to a local session" is a Claude Code action, not something this repo controls.</P>
+          <PatchLinks prs={[41]} />
         </Item>
 
         <Item title="Hosting & network">
