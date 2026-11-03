@@ -127,6 +127,7 @@ const C = ({ children }: { children: ReactNode }) => (
 // --- Patch trail: newest first. Descriptions of pre-#15 PRs are
 // reconstructed from the repo; the recent ones are precise. ---
 const PATCHES: { pr: number; name: string; body: ReactNode }[] = [
+  { pr: 36, name: "EpiSplit grid nav + tax defaults", body: "Full spreadsheet keys in the grid: arrow keys move cell-to-cell (↓ / Enter go down; ←/→ hop columns only at the text edge, so you can still edit within a cell), Ctrl/Cmd+arrows jump to the first/last row or column, Ctrl/Cmd+D fills a column. Tax defaults to 20% for new items and scanned batches (inheriting the last item's rate when it has one); a scanned batch autofills its rate once, then each item is editable." },
   { pr: 35, name: "EpiSplit grid + OCR polish", body: "Receipt parser now handles S$/SGD prefixes and multi-column POS layouts (the printed-receipt failure was the parser, not OCR), and images are greyscaled/upscaled/contrast-boosted before tesseract (+PSM) for better reads. Tax carries over: new items inherit the last tax rate, scanned batches share one tax. Grid keyboard nav — Ctrl/Cmd+↑/↓ jump to first/last row, Ctrl/Cmd+D fills a column (fast tax fill). Bulk delete — checkboxes on desktop; on mobile a row's ✕ opens WhatsApp-style multi-select." },
   { pr: 34, name: "Split-screen", body: "Use two modules at once: the ⊟ toggle (sidebar on desktop, title bar on mobile) opens a second pane — side by side on desktop, stacked on mobile — each scrolling on its own, with its own module picker. The sidebar/bottom-nav still drives the main pane; ✕ closes the second." },
   { pr: 33, name: "OCR input sources", body: "Desktop scans from the clipboard — paste a copied receipt image or press Cmd/Ctrl+V, no file dialog. Mobile's picker now offers both the photo gallery and the camera (removed the camera-only lock)." },
@@ -216,8 +217,8 @@ export default function DevPanel() {
             <li>Per item: cost, tax %, and each person's <em>share units</em> (leave blank = not sharing).</li>
             <li>Each item's tax-inclusive cost is split in proportion to shares; the <strong>Owed</strong> row shows each person's total, live. Edits autosave.</li>
             <li><strong>Scan receipt:</strong> on mobile snap a photo or pick from your gallery; on desktop paste a copied image (Cmd/Ctrl+V). OCR runs in your browser (no AI tokens) and pulls the line items to review/edit before adding; set one tax % for the whole receipt in that modal. First scan downloads a small English model, then it's cached.</li>
-            <li><strong>Tax carries over:</strong> a new item inherits the last item's tax %, so you don't retype it.</li>
-            <li><strong>Fast entry (desktop):</strong> Ctrl/Cmd+↑/↓ jump to the first/last row; Ctrl/Cmd+D fills the focused column down (e.g. one tax rate for every item).</li>
+            <li><strong>Tax:</strong> defaults to 20%; a new item (or scanned batch) inherits the last item's rate when it has one. A scanned batch sets its rate once, then each item is editable.</li>
+            <li><strong>Fast entry (desktop):</strong> arrow keys move between cells (↓ or Enter to go down; ←/→ hop columns at the text edge), Ctrl/Cmd+arrows jump to the first/last row or column, and Ctrl/Cmd+D fills the focused column (one tax for all).</li>
             <li><strong>Bulk delete:</strong> tick rows (desktop checkboxes) or tap a row's ✕ to start selecting (mobile), then Delete.</li>
           </UL>
           <PatchLinks prs={[24, 32, 33, 35]} />

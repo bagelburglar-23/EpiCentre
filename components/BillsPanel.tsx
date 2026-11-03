@@ -112,9 +112,14 @@ export default function BillsPanel({
       ),
     });
   }
-  // New items inherit the last item's tax % (one place usually has one rate),
-  // so you don't retype it every row.
-  const lastTax = () => buffer.items[buffer.items.length - 1]?.taxPercent ?? "";
+  // Tax defaults to 20%; otherwise a new item (or scanned batch) inherits the
+  // last item's rate, so you don't retype it. A scanned batch shares one rate
+  // (set once in the scan modal), then each item is individually editable.
+  const DEFAULT_TAX = "20";
+  const lastTax = () => {
+    const t = buffer.items[buffer.items.length - 1]?.taxPercent;
+    return t && t.trim() ? t : DEFAULT_TAX;
+  };
   function addItem() {
     commit({
       ...buffer,
@@ -169,11 +174,13 @@ export default function BillsPanel({
 
   // --- Excel-ish keyboard nav on the grid (desktop) ---
   function focusCell(row: number, col: string) {
-    gridRef.current
-      ?.querySelector<HTMLInputElement>(
-        `input[data-row="${row}"][data-col="${col}"]`
-      )
-      ?.focus();
+    const el = gridRef.current?.querySelector<HTMLInputElement>(
+      `input[data-row="${row}"][data-col="${col}"]`
+    );
+    if (el) {
+      el.focus();
+      el.select(); // land selected, so typing replaces (spreadsheet-style)
+    }
   }
   function fillColumn(col: string, value: string) {
     if (col === "cost") {
@@ -195,20 +202,58 @@ export default function BillsPanel({
       });
     }
   }
+  // Spreadsheet keys on the grid:
+  //  ↑/↓ move a row, Enter moves down; ←/→ move a column but only at the text
+  //  edge (so you can still edit within a cell); Ctrl/Cmd+↑/↓/←/→ jump to the
+  //  first/last row or column; Ctrl/Cmd+D fills the focused column (fast way
+  //  to set one tax rate for every item).
   function onGridKey(e: React.KeyboardEvent<HTMLDivElement>) {
-    if (!(e.ctrlKey || e.metaKey)) return;
-    const t = e.target as HTMLElement;
+    const t = e.target as HTMLInputElement;
     const col = t.dataset.col;
     const row = Number(t.dataset.row);
     if (!col || Number.isNaN(row)) return;
-    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+
+    const cols = [
+      "name",
+      "cost",
+      "tax",
+      ...buffer.participants.map((p) => `share:${p.id}`),
+    ];
+    const ci = cols.indexOf(col);
+    const lastRow = buffer.items.length - 1;
+    const ctrl = e.ctrlKey || e.metaKey;
+    const len = (t.value ?? "").length;
+    const atStart = t.selectionStart === 0 && t.selectionEnd === 0;
+    const atEnd = t.selectionStart === len && t.selectionEnd === len;
+
+    if (ctrl && e.key.toLowerCase() === "d") {
       e.preventDefault();
-      focusCell(e.key === "ArrowDown" ? buffer.items.length - 1 : 0, col);
-    } else if (e.key.toLowerCase() === "d") {
-      // Ctrl/Cmd+D: fill this column with the focused cell's value (fast way
-      // to set one tax rate down the whole bill).
+      fillColumn(col, t.value ?? "");
+    } else if (e.key === "ArrowDown") {
       e.preventDefault();
-      fillColumn(col, (t as HTMLInputElement).value ?? "");
+      focusCell(ctrl ? lastRow : Math.min(lastRow, row + 1), col);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      focusCell(Math.min(lastRow, row + 1), col);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      focusCell(ctrl ? 0 : Math.max(0, row - 1), col);
+    } else if (e.key === "ArrowRight") {
+      if (ctrl) {
+        e.preventDefault();
+        focusCell(row, cols[cols.length - 1]);
+      } else if (atEnd && ci < cols.length - 1) {
+        e.preventDefault();
+        focusCell(row, cols[ci + 1]);
+      }
+    } else if (e.key === "ArrowLeft") {
+      if (ctrl) {
+        e.preventDefault();
+        focusCell(row, cols[0]);
+      } else if (atStart && ci > 0) {
+        e.preventDefault();
+        focusCell(row, cols[ci - 1]);
+      }
     }
   }
   function addParticipant() {
