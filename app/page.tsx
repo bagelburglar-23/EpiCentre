@@ -41,7 +41,8 @@ export default async function Home() {
       items={[
         {
           id: "lists",
-          label: "Lists",
+          label: "EpiList",
+          short: "Li",
           content: (
             <ListsPanel
               initialLists={lists}
@@ -52,7 +53,8 @@ export default async function Home() {
         },
         {
           id: "calplus",
-          label: "Cal+",
+          label: "EpiCal",
+          short: "Ca",
           content: (
             <CalPlusPanel
               initialEvents={events}
@@ -77,6 +79,8 @@ export default async function Home() {
         {
           id: "settings",
           label: "Settings",
+          short: "☰",
+          pinned: true,
           content: <SettingsPanel />,
         },
       ]}
