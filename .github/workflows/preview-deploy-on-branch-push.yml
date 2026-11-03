@@ -60,15 +60,3 @@ jobs:
             npm run build
             node scripts/record-deploy.mjs preview "$NEXT_PUBLIC_COMMIT_SHA"
             systemctl --user restart epicentre-preview
-
-      # Runs only after UAT is live, so the phone push means "ready to check".
-      # A review request is what GitHub Mobile pushes by default; a bot merely
-      # opening a PR is not. REST call, not `gh pr edit` (whose GraphQL path
-      # has broken on GITHUB_TOKEN before).
-      - name: Request Lucas's review (phone notification)
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          n=$(gh pr list --head "${{ github.ref_name }}" --json number -q '.[0].number')
-          gh api -X POST "repos/${{ github.repository }}/pulls/$n/requested_reviewers" \
-            -f 'reviewers[]=bagelburglar-23'

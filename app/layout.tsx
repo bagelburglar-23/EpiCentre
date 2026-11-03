@@ -51,11 +51,14 @@ export const metadata: Metadata = {
 };
 
 // Mobile viewport: fill the screen edge-to-edge (viewport-fit=cover lets the
-// bottom nav's safe-area padding reach under the iOS home indicator) and let
-// the dark theme colour the status bar area. Zoom is left enabled.
+// bottom nav's safe-area padding reach under the iOS home indicator), colour
+// the status-bar area dark, and lock zoom so the app can't be pinched/zoomed
+// out of place (it behaves like a native app, not a web page).
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
   themeColor: "#000000",
 };
