@@ -1,7 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { addEvent, deleteEvent, updateEvent, markSyncedToGoogle } from "@/lib/events";
+import {
+  addEvent,
+  deleteEvent,
+  updateEvent,
+  markSyncedToGoogle,
+  updateCachedGoogleEvent,
+  deleteCachedGoogleEvent,
+} from "@/lib/events";
 import {
   isGoogleCalendarConnected,
   pushEventToGoogle,
@@ -74,6 +81,50 @@ export async function deleteEventAction(id: number) {
     } catch (e) {
       console.error("Failed to delete event on Google Calendar:", e);
     }
+  }
+  revalidatePath("/");
+}
+
+// Editing a Google-SOURCED event (pulled into the read-only cache): PATCH the
+// event on its own Google calendar, then mirror the edit into the cache so
+// Cal+ reflects it immediately (the next sync overwrites the row anyway).
+// These hit the real Google account even from UAT (shared token), by design.
+export async function updateGoogleEventAction(
+  gcalEventId: string,
+  calendarId: string,
+  title: string,
+  description: string,
+  start: string,
+  end: string,
+  allDay: boolean
+) {
+  if (!gcalEventId || !isGoogleCalendarConnected()) return;
+  const fields = {
+    title: title.trim(),
+    description: description.trim() || null,
+    start,
+    end: end || start,
+    allDay,
+  };
+  try {
+    await updateGoogleEvent(gcalEventId, fields, calendarId || "primary");
+    updateCachedGoogleEvent(gcalEventId, fields);
+  } catch (e) {
+    console.error("Failed to update Google-sourced event:", e);
+  }
+  revalidatePath("/");
+}
+
+export async function deleteGoogleEventAction(
+  gcalEventId: string,
+  calendarId: string
+) {
+  if (!gcalEventId || !isGoogleCalendarConnected()) return;
+  try {
+    await deleteGoogleEvent(gcalEventId, calendarId || "primary");
+    deleteCachedGoogleEvent(gcalEventId);
+  } catch (e) {
+    console.error("Failed to delete Google-sourced event:", e);
   }
   revalidatePath("/");
 }

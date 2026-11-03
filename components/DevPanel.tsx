@@ -127,6 +127,7 @@ const C = ({ children }: { children: ReactNode }) => (
 // --- Patch trail: newest first. Descriptions of pre-#15 PRs are
 // reconstructed from the repo; the recent ones are precise. ---
 const PATCHES: { pr: number; name: string; body: ReactNode }[] = [
+  { pr: 30, name: "EpiCal two-way Google edit", body: "Events pulled from Google can be edited and deleted from Cal+ too - the change PATCH/DELETEs the event on its own Google calendar and mirrors into the local cache. Activates once this reaches prod and the sync tags each cached event with its calendar id." },
   { pr: 29, name: "Mobile layout overhaul", body: "Lock the app to the viewport like a native shell (no floating, no rubber-band bounce, no accidental horizontal swipe); tint the pinned Refresh/Settings cluster so scrolling modules don't look glitchy behind it; show list/bill rename+delete buttons on mobile (no hover there); larger base font on phones." },
   { pr: 28, name: "UX tweaks: Dump, list delete choice, collapsible rails", body: "Rename the Inbox list to Dump (non-deletable); deleting a list asks whether to move its items to Dump or delete them too; EpiList/EpiSplit rails collapse; bills delete without a confirm; whole-app Refresh button." },
   { pr: 27, name: "Per-module '?' deep-links", body: "A '?' in each module header opens EpiDev scrolled to that module's guide, via a tiny client nav-bus + a Shell listener." },
@@ -198,9 +199,9 @@ export default function DevPanel() {
           <UL>
             <li>Month / Week / Day views; click a day to drill in.</li>
             <li>Create, edit and delete events. An event you create here is pushed to Google; editing or deleting it updates Google too.</li>
-            <li>Events pulled from Google (every calendar, incl. Birthdays) show prefixed <C>G</C> and are read-only here.</li>
+            <li>Events pulled from Google (every calendar, incl. Birthdays) show prefixed <C>G</C>; tap one to edit or delete it — the change syncs to that Google calendar. (Editing a "G" event activates after the sync tags it with its calendar id.)</li>
           </UL>
-          <PatchLinks prs={[14, 21, 8, 9]} />
+          <PatchLinks prs={[14, 21, 30, 8, 9]} />
         </Item>
 
         <Item title="EpiSplit — bills" id="guide-bills">

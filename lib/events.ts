@@ -149,6 +149,7 @@ export type CachedGoogleEvent = {
   end: string;
   allDay: boolean;
   calendarName: string | null;
+  calendarId: string | null; // null until the next sync repopulates the cache
 };
 
 type CacheRow = {
@@ -159,7 +160,42 @@ type CacheRow = {
   end: string;
   all_day: number;
   calendar_name: string | null;
+  calendar_id: string | null;
 };
+
+// Reflect a Google-sourced event's edit in the local cache so Cal+ updates
+// immediately. The 30-min sync overwrites this row wholesale anyway; this
+// just avoids waiting for it after an edit.
+export function updateCachedGoogleEvent(
+  gcalEventId: string,
+  fields: {
+    title: string;
+    description: string | null;
+    start: string;
+    end: string;
+    allDay: boolean;
+  }
+): void {
+  getDb()
+    .prepare(
+      `UPDATE google_events_cache SET title = ?, description = ?, start = ?, end = ?, all_day = ?, synced_at = datetime('now')
+       WHERE gcal_event_id = ?`
+    )
+    .run(
+      fields.title,
+      fields.description,
+      fields.start,
+      fields.end,
+      fields.allDay ? 1 : 0,
+      gcalEventId
+    );
+}
+
+export function deleteCachedGoogleEvent(gcalEventId: string): void {
+  getDb()
+    .prepare(`DELETE FROM google_events_cache WHERE gcal_event_id = ?`)
+    .run(gcalEventId);
+}
 
 // Read-only mirror, populated by scripts/sync-google-events.mjs - see that
 // file and lib/google-calendar.ts for why this is a separate cache table
@@ -171,7 +207,7 @@ export async function listCachedGoogleEvents(
   await connection();
   const rows = getDb()
     .prepare(
-      `SELECT gcal_event_id, title, description, start, end, all_day, calendar_name
+      `SELECT gcal_event_id, title, description, start, end, all_day, calendar_name, calendar_id
        FROM google_events_cache WHERE start < ? AND end >= ? ORDER BY start ASC`
     )
     .all(rangeEnd, rangeStart) as CacheRow[];
@@ -183,5 +219,6 @@ export async function listCachedGoogleEvents(
     end: r.end,
     allDay: !!r.all_day,
     calendarName: r.calendar_name,
+    calendarId: r.calendar_id,
   }));
 }

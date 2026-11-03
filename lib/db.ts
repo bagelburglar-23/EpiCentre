@@ -138,6 +138,14 @@ export function getDb(): Database.Database {
   } catch (e) {
     if (!(e instanceof Error) || !e.message.includes("duplicate column")) throw e;
   }
+  // calendar_id: which Google calendar an event lives on. Needed to PATCH/
+  // DELETE the right calendar when a Google-sourced event is edited from
+  // Cal+ (two-way edit). Null until the next sync run repopulates the cache.
+  try {
+    instance.exec(`ALTER TABLE google_events_cache ADD COLUMN calendar_id TEXT`);
+  } catch (e) {
+    if (!(e instanceof Error) || !e.message.includes("duplicate column")) throw e;
+  }
   // Bills (EpiSplit): one row per outing. The whole bill - participants,
   // items, per-item per-person shares, tax rates - is a JSON document in
   // `data`, edited and recomputed as a unit (see lib/bill-calc.ts). A

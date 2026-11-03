@@ -1,9 +1,39 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { addEventAction, updateEventAction, deleteEventAction } from "@/app/calplus/actions";
+import {
+  addEventAction,
+  updateEventAction,
+  deleteEventAction,
+  updateGoogleEventAction,
+  deleteGoogleEventAction,
+} from "@/app/calplus/actions";
 import type { CalEvent, CachedGoogleEvent } from "@/lib/events";
 import HelpButton from "@/components/HelpButton";
+
+// The fields the editor works in - shared by local (EpiC) and Google-sourced
+// events, so one modal edits either.
+type EventFields = {
+  title: string;
+  description: string | null;
+  start: string;
+  end: string;
+  allDay: boolean;
+};
+
+// What the modal is editing: the prefill fields plus save/delete bound to the
+// specific event (local or Google) by whoever opened it.
+type ModalEditing = {
+  data: EventFields;
+  onUpdate: (
+    title: string,
+    description: string,
+    start: string,
+    end: string,
+    allDay: boolean
+  ) => void;
+  onDelete: () => void;
+};
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -90,7 +120,7 @@ function EventModal({
 }: {
   defaultDate: string;
   isPreview: boolean;
-  editing: CalEvent | null;
+  editing: EventFields | null;
   onClose: () => void;
   onCreate: (
     title: string,
@@ -101,14 +131,13 @@ function EventModal({
     isTest: boolean
   ) => void;
   onUpdate: (
-    id: number,
     title: string,
     description: string,
     start: string,
     end: string,
     allDay: boolean
   ) => void;
-  onDelete: (id: number) => void;
+  onDelete: () => void;
 }) {
   const [title, setTitle] = useState(editing?.title ?? "");
   const [description, setDescription] = useState(editing?.description ?? "");
@@ -124,7 +153,7 @@ function EventModal({
     const start = allDay ? `${startDate}T00:00:00` : `${startDate}T${startTime}:00`;
     const end = allDay ? `${endDate}T00:00:00` : `${endDate}T${endTime}:00`;
     if (editing) {
-      onUpdate(editing.id, title, description, start, end, allDay);
+      onUpdate(title, description, start, end, allDay);
     } else {
       onCreate(title, description, start, end, allDay, addAsTest);
     }
@@ -213,7 +242,7 @@ function EventModal({
           {editing && (
             <button
               onClick={() => {
-                onDelete(editing.id);
+                onDelete();
                 onClose();
               }}
               className="mr-auto rounded px-3 py-1.5 font-mono text-xs text-accent-bright hover:bg-accent-dim"
@@ -320,9 +349,18 @@ export default function CalPlusPanel({
   const [focusDate, setFocusDate] = useState(todayKey);
   const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [events, setEvents] = useState(initialEvents);
-  const [modalState, setModalState] = useState<{ date: string; editing: CalEvent | null } | null>(
-    null
-  );
+  // Google events get local state too, so an edit shows immediately (and a
+  // Refresh / the 30-min sync brings fresh server data).
+  const [googleEvs, setGoogleEvs] = useState(googleEvents);
+  const [prevGoogle, setPrevGoogle] = useState(googleEvents);
+  if (googleEvents !== prevGoogle) {
+    setPrevGoogle(googleEvents);
+    setGoogleEvs(googleEvents);
+  }
+  const [modalState, setModalState] = useState<{
+    date: string;
+    editing: ModalEditing | null;
+  } | null>(null);
   const [, startTransition] = useTransition();
 
   function openCreate(date: string) {
@@ -330,7 +368,25 @@ export default function CalPlusPanel({
   }
 
   function openEdit(event: CalEvent) {
-    setModalState({ date: event.start.slice(0, 10), editing: event });
+    setModalState({
+      date: event.start.slice(0, 10),
+      editing: {
+        data: event,
+        onUpdate: (t, d, s, en, a) => update(event.id, t, d, s, en, a),
+        onDelete: () => remove(event.id),
+      },
+    });
+  }
+
+  function openEditGoogle(g: CachedGoogleEvent) {
+    setModalState({
+      date: g.start.slice(0, 10),
+      editing: {
+        data: g,
+        onUpdate: (t, d, s, en, a) => updateGoogle(g, t, d, s, en, a),
+        onDelete: () => removeGoogle(g),
+      },
+    });
   }
 
   const focus = new Date(`${focusDate}T00:00:00Z`);
@@ -359,7 +415,7 @@ export default function CalPlusPanel({
         onEdit: () => openEdit(e),
       });
     }
-    for (const e of googleEvents) {
+    for (const e of googleEvs) {
       push({
         key: `google-${e.gcalEventId}`,
         title: e.title,
@@ -369,12 +425,16 @@ export default function CalPlusPanel({
         isTest: false,
         source: "google",
         calendarName: e.calendarName,
+        // Editable/deletable only once we know which calendar it's on (set by
+        // the sync). Pre-sync rows stay read-only.
+        onEdit: e.calendarId ? () => openEditGoogle(e) : undefined,
+        onDelete: e.calendarId ? () => removeGoogle(e) : undefined,
       });
     }
     for (const list of map.values()) list.sort((a, b) => a.start.localeCompare(b.start));
     return map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [events, googleEvents]);
+  }, [events, googleEvs]);
 
   function navigate(delta: number) {
     setFocusDate((d) => {
@@ -468,6 +528,41 @@ export default function CalPlusPanel({
     setEvents((prev) => prev.filter((e) => e.id !== id));
     startTransition(async () => {
       await deleteEventAction(id);
+    });
+  }
+
+  function updateGoogle(
+    g: CachedGoogleEvent,
+    title: string,
+    description: string,
+    start: string,
+    end: string,
+    allDay: boolean
+  ) {
+    setGoogleEvs((prev) =>
+      prev.map((ev) =>
+        ev.gcalEventId === g.gcalEventId
+          ? { ...ev, title: title.trim(), description: description.trim() || null, start, end, allDay }
+          : ev
+      )
+    );
+    startTransition(async () => {
+      await updateGoogleEventAction(
+        g.gcalEventId,
+        g.calendarId ?? "",
+        title,
+        description,
+        start,
+        end,
+        allDay
+      );
+    });
+  }
+
+  function removeGoogle(g: CachedGoogleEvent) {
+    setGoogleEvs((prev) => prev.filter((ev) => ev.gcalEventId !== g.gcalEventId));
+    startTransition(async () => {
+      await deleteGoogleEventAction(g.gcalEventId, g.calendarId ?? "");
     });
   }
 
@@ -654,11 +749,11 @@ export default function CalPlusPanel({
         <EventModal
           defaultDate={modalState.date}
           isPreview={isPreview}
-          editing={modalState.editing}
+          editing={modalState.editing?.data ?? null}
           onClose={() => setModalState(null)}
           onCreate={add}
-          onUpdate={update}
-          onDelete={remove}
+          onUpdate={modalState.editing?.onUpdate ?? (() => {})}
+          onDelete={modalState.editing?.onDelete ?? (() => {})}
         />
       )}
     </div>

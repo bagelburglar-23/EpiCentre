@@ -162,10 +162,11 @@ export async function updateGoogleEvent(
     start: string;
     end: string;
     allDay: boolean;
-  }
+  },
+  calendarId: string = "primary"
 ): Promise<void> {
   const accessToken = await getAccessToken();
-  const res = await fetch(calendarEventUrl("primary", gcalEventId), {
+  const res = await fetch(calendarEventUrl(calendarId, gcalEventId), {
     method: "PATCH",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -183,9 +184,12 @@ export async function updateGoogleEvent(
 
 // Delete an EpiC event from Google too. 404/410 means it is already gone
 // there (deleted directly in Google) - not an error for our purposes.
-export async function deleteGoogleEvent(gcalEventId: string): Promise<void> {
+export async function deleteGoogleEvent(
+  gcalEventId: string,
+  calendarId: string = "primary"
+): Promise<void> {
   const accessToken = await getAccessToken();
-  const res = await fetch(calendarEventUrl("primary", gcalEventId), {
+  const res = await fetch(calendarEventUrl(calendarId, gcalEventId), {
     method: "DELETE",
     headers: { Authorization: `Bearer ${accessToken}` },
   });
