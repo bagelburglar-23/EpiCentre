@@ -54,6 +54,10 @@ export default function BillsPanel({
   // column's visibility on mobile (desktop shows it always).
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [selecting, setSelecting] = useState(false);
+  // Spreadsheet-style range selection within one column (rows anchor..focus).
+  const [sel, setSel] = useState<{ col: string; anchor: number; focus: number } | null>(
+    null
+  );
   const [, startTransition] = useTransition();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
@@ -83,6 +87,7 @@ export default function BillsPanel({
   function selectBill(id: number) {
     if (id === selectedId) return;
     flush();
+    setSel(null);
     const b = bills.find((x) => x.id === id);
     setSelectedId(id);
     setName(b?.name ?? "");
@@ -182,31 +187,47 @@ export default function BillsPanel({
       el.select(); // land selected, so typing replaces (spreadsheet-style)
     }
   }
-  function fillColumn(col: string, value: string) {
-    if (col === "cost") {
-      commit({ ...buffer, items: buffer.items.map((it) => ({ ...it, cost: value })) });
-    } else if (col === "tax") {
-      commit({
-        ...buffer,
-        items: buffer.items.map((it) => ({ ...it, taxPercent: value })),
-      });
-    } else if (col.startsWith("share:")) {
+  function cellValue(it: BillItem, col: string): string {
+    if (col === "cost") return it.cost;
+    if (col === "tax") return it.taxPercent;
+    if (col.startsWith("share:")) {
+      const pid = col.slice(6);
+      return it.shares[pid] ? String(it.shares[pid]) : "";
+    }
+    if (col === "name") return it.name;
+    return "";
+  }
+  function withCell(it: BillItem, col: string, value: string): BillItem {
+    if (col === "cost") return { ...it, cost: value };
+    if (col === "tax") return { ...it, taxPercent: value };
+    if (col.startsWith("share:")) {
       const pid = col.slice(6);
       const n = value === "" ? 0 : Math.max(0, Math.floor(Number(value) || 0));
-      commit({
-        ...buffer,
-        items: buffer.items.map((it) => ({
-          ...it,
-          shares: { ...it.shares, [pid]: n },
-        })),
-      });
+      return { ...it, shares: { ...it.shares, [pid]: n } };
     }
+    if (col === "name") return { ...it, name: value };
+    return it;
   }
+  function fillRange(col: string, value: string, top: number, bot: number) {
+    commit({
+      ...buffer,
+      items: buffer.items.map((it, i) =>
+        i >= top && i <= bot ? withCell(it, col, value) : it
+      ),
+    });
+  }
+  const inSel = (row: number, col: string) =>
+    sel != null &&
+    sel.col === col &&
+    row >= Math.min(sel.anchor, sel.focus) &&
+    row <= Math.max(sel.anchor, sel.focus);
   // Spreadsheet keys on the grid:
-  //  ↑/↓ move a row, Enter moves down; ←/→ move a column but only at the text
-  //  edge (so you can still edit within a cell); Ctrl/Cmd+↑/↓/←/→ jump to the
-  //  first/last row or column; Ctrl/Cmd+D fills the focused column (fast way
-  //  to set one tax rate for every item).
+  //  ↑/↓ move a row, Enter moves down; ←/→ move a column at the text edge
+  //  (so you can still edit within a cell); Ctrl/Cmd+arrows jump to the
+  //  first/last row or column. Shift+↑/↓ selects a range down a column
+  //  (Ctrl to the edge). Ctrl/Cmd+D fills the focused column, or - with a
+  //  range selected - copies the top of the selection down it. Delete clears
+  //  a multi-cell selection; Escape clears the selection.
   function onGridKey(e: React.KeyboardEvent<HTMLDivElement>) {
     const t = e.target as HTMLInputElement;
     const col = t.dataset.col;
@@ -222,14 +243,61 @@ export default function BillsPanel({
     const ci = cols.indexOf(col);
     const lastRow = buffer.items.length - 1;
     const ctrl = e.ctrlKey || e.metaKey;
+    const shift = e.shiftKey;
     const len = (t.value ?? "").length;
     const atStart = t.selectionStart === 0 && t.selectionEnd === 0;
     const atEnd = t.selectionStart === len && t.selectionEnd === len;
 
+    // Extend a column selection with Shift (+Ctrl to the edge).
+    if (shift && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+      e.preventDefault();
+      const anchor = sel && sel.col === col ? sel.anchor : row;
+      let focus = sel && sel.col === col ? sel.focus : row;
+      focus =
+        e.key === "ArrowDown"
+          ? ctrl
+            ? lastRow
+            : Math.min(lastRow, focus + 1)
+          : ctrl
+            ? 0
+            : Math.max(0, focus - 1);
+      setSel({ col, anchor, focus });
+      focusCell(focus, col);
+      return;
+    }
+
     if (ctrl && e.key.toLowerCase() === "d") {
       e.preventDefault();
-      fillColumn(col, t.value ?? "");
-    } else if (e.key === "ArrowDown") {
+      if (sel && sel.col === col) {
+        const top = Math.min(sel.anchor, sel.focus);
+        const bot = Math.max(sel.anchor, sel.focus);
+        const value = buffer.items[top] ? cellValue(buffer.items[top], col) : t.value ?? "";
+        fillRange(col, value, top, bot);
+      } else {
+        fillRange(col, t.value ?? "", 0, lastRow);
+      }
+      return;
+    }
+
+    if (e.key === "Escape") {
+      if (sel) {
+        e.preventDefault();
+        setSel(null);
+      }
+      return;
+    }
+
+    // Delete clears a multi-cell selection (single cell keeps normal editing).
+    if (e.key === "Delete" && sel && sel.col === col && sel.anchor !== sel.focus) {
+      e.preventDefault();
+      fillRange(col, "", Math.min(sel.anchor, sel.focus), Math.max(sel.anchor, sel.focus));
+      return;
+    }
+
+    // Any non-extending key collapses the selection.
+    if (sel && !shift) setSel(null);
+
+    if (e.key === "ArrowDown") {
       e.preventDefault();
       focusCell(ctrl ? lastRow : Math.min(lastRow, row + 1), col);
     } else if (e.key === "Enter") {
@@ -545,7 +613,7 @@ export default function BillsPanel({
                         </button>
                       </div>
                     </td>
-                    <td className="px-1 py-1">
+                    <td className={`px-1 py-1 ${inSel(idx, "cost") ? "bg-accent-dim/40" : ""}`}>
                       <input
                         data-row={idx}
                         data-col="cost"
@@ -556,7 +624,7 @@ export default function BillsPanel({
                         onChange={(e) => setItem(it.id, { cost: e.target.value })}
                       />
                     </td>
-                    <td className="px-1 py-1">
+                    <td className={`px-1 py-1 ${inSel(idx, "tax") ? "bg-accent-dim/40" : ""}`}>
                       <input
                         data-row={idx}
                         data-col="tax"
@@ -568,7 +636,12 @@ export default function BillsPanel({
                       />
                     </td>
                     {buffer.participants.map((p) => (
-                      <td key={p.id} className="px-1 py-1 text-center">
+                      <td
+                        key={p.id}
+                        className={`px-1 py-1 text-center ${
+                          inSel(idx, `share:${p.id}`) ? "bg-accent-dim/40" : ""
+                        }`}
+                      >
                         <input
                           data-row={idx}
                           data-col={`share:${p.id}`}

@@ -127,6 +127,7 @@ const C = ({ children }: { children: ReactNode }) => (
 // --- Patch trail: newest first. Descriptions of pre-#15 PRs are
 // reconstructed from the repo; the recent ones are precise. ---
 const PATCHES: { pr: number; name: string; body: ReactNode }[] = [
+  { pr: 40, name: "EpiSplit range-select", body: "Shift+↑/↓ selects a range down a column (Ctrl to the edge), highlighted; Ctrl/Cmd+D then copies the top of the selection down it (set one tax on the first row, select down, fill). Delete clears a multi-cell selection, Escape clears it. Without a selection, Ctrl+D still fills the whole column." },
   { pr: 39, name: "Settings build-out", body: "Settings gets a proper sidebar (via the shared SideRail): Account (password), Appearance (text size — scales most of the UI, per-device), EpiSplit (default tax rate), Reminders (the three digest times), and About (into EpiDev). Prefs live per-device in localStorage; text size applies pre-paint so there's no flash." },
   { pr: 38, name: "Shared SideRail component", body: "Extracted the collapsible left rail (title, ? help link, collapse toggle, footer slot) into one <SideRail> used by EpiList and EpiSplit (and Settings next). Pure refactor — behaviour unchanged — so future rail tweaks land in one place for every module that uses it." },
   { pr: 37, name: "Telegram reminders: 3×-daily per-list digest", body: "Reminders now fire at 08:30 / 16:00 / 22:00 HKT (was just 16:00) and send a digest of every OPEN to-do grouped by list — one message per list, so it buzzes several times like a mini-alarm. Leads with a time-aware greeting; flags overdue (🔴) and due-today (🟡). Test rows never page." },
@@ -221,10 +222,10 @@ export default function DevPanel() {
             <li>Each item's tax-inclusive cost is split in proportion to shares; the <strong>Owed</strong> row shows each person's total, live. Edits autosave.</li>
             <li><strong>Scan receipt:</strong> on mobile snap a photo or pick from your gallery; on desktop paste a copied image (Cmd/Ctrl+V). OCR runs in your browser (no AI tokens) and pulls the line items to review/edit before adding; set one tax % for the whole receipt in that modal. First scan downloads a small English model, then it's cached.</li>
             <li><strong>Tax:</strong> defaults to 20%; a new item (or scanned batch) inherits the last item's rate when it has one. A scanned batch sets its rate once, then each item is editable.</li>
-            <li><strong>Fast entry (desktop):</strong> arrow keys move between cells (↓ or Enter to go down; ←/→ hop columns at the text edge), Ctrl/Cmd+arrows jump to the first/last row or column, and Ctrl/Cmd+D fills the focused column (one tax for all).</li>
+            <li><strong>Fast entry (desktop):</strong> arrow keys move between cells (↓ or Enter down; ←/→ hop columns at the text edge), Ctrl/Cmd+arrows jump to the first/last row or column. <strong>Shift+↑/↓ selects a range</strong> down a column (Ctrl to the edge); <strong>Ctrl/Cmd+D</strong> fills the focused column, or copies the selection's top value down it. Delete clears a multi-cell selection.</li>
             <li><strong>Bulk delete:</strong> tick rows (desktop checkboxes) or tap a row's ✕ to start selecting (mobile), then Delete.</li>
           </UL>
-          <PatchLinks prs={[24, 32, 33, 35]} />
+          <PatchLinks prs={[24, 32, 33, 35, 36, 40]} />
         </Item>
 
         <Item title="EpiTrader — personal portfolio (shell)" id="guide-epitrader">
