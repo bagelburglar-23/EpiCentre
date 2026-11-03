@@ -1,11 +1,13 @@
 [Unit]
-Description=Run send-reminders daily
+Description=Run send-reminders three times a day
 
 [Timer]
-# 08:00 UTC = 16:00 HKT - lands in the only window Lucas sees alerts (the
-# ~15:30-18:00 gap between Tokyo equities and evening derivatives). Was
-# 09:00 UTC (17:00 HKT); moved to match the 16:00-local alert convention.
+# 08:30, 16:00, 22:00 HKT (= 00:30, 08:00, 14:00 UTC): a morning nudge, the
+# 16:00 gap Lucas actually sees (between Tokyo equities and evening
+# derivatives), and a night wind-down. Each fire sends a per-list digest.
+OnCalendar=*-*-* 00:30:00
 OnCalendar=*-*-* 08:00:00
+OnCalendar=*-*-* 14:00:00
 Persistent=true
 
 [Install]

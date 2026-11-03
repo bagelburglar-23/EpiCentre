@@ -127,6 +127,7 @@ const C = ({ children }: { children: ReactNode }) => (
 // --- Patch trail: newest first. Descriptions of pre-#15 PRs are
 // reconstructed from the repo; the recent ones are precise. ---
 const PATCHES: { pr: number; name: string; body: ReactNode }[] = [
+  { pr: 37, name: "Telegram reminders: 3×-daily per-list digest", body: "Reminders now fire at 08:30 / 16:00 / 22:00 HKT (was just 16:00) and send a digest of every OPEN to-do grouped by list — one message per list, so it buzzes several times like a mini-alarm. Leads with a time-aware greeting; flags overdue (🔴) and due-today (🟡). Test rows never page." },
   { pr: 36, name: "EpiSplit grid nav + tax defaults", body: "Full spreadsheet keys in the grid: arrow keys move cell-to-cell (↓ / Enter go down; ←/→ hop columns only at the text edge, so you can still edit within a cell), Ctrl/Cmd+arrows jump to the first/last row or column, Ctrl/Cmd+D fills a column. Tax defaults to 20% for new items and scanned batches (inheriting the last item's rate when it has one); a scanned batch autofills its rate once, then each item is editable." },
   { pr: 35, name: "EpiSplit grid + OCR polish", body: "Receipt parser now handles S$/SGD prefixes and multi-column POS layouts (the printed-receipt failure was the parser, not OCR), and images are greyscaled/upscaled/contrast-boosted before tesseract (+PSM) for better reads. Tax carries over: new items inherit the last tax rate, scanned batches share one tax. Grid keyboard nav — Ctrl/Cmd+↑/↓ jump to first/last row, Ctrl/Cmd+D fills a column (fast tax fill). Bulk delete — checkboxes on desktop; on mobile a row's ✕ opens WhatsApp-style multi-select." },
   { pr: 34, name: "Split-screen", body: "Use two modules at once: the ⊟ toggle (sidebar on desktop, title bar on mobile) opens a second pane — side by side on desktop, stacked on mobile — each scrolling on its own, with its own module picker. The sidebar/bottom-nav still drives the main pane; ✕ closes the second." },
@@ -195,7 +196,7 @@ export default function DevPanel() {
             <li><C>+ List</C> to create; hover a list for ✎ rename / ✕ delete (deleting sends its items back to the Inbox).</li>
             <li><C>+ Add</C> an item: title, details, due date, and which list. In details, lines starting with <C>-</C> render as bullets; they collapse behind ▸.</li>
             <li>Tap an item's title to edit it — including moving it to another list via the List dropdown.</li>
-            <li>A due date drives the daily Telegram reminder (16:00 HKT).</li>
+            <li>Open items feed the Telegram digest sent 3×/day (08:30 / 16:00 / 22:00 HKT), grouped by list; due dates are flagged overdue/today.</li>
           </UL>
           <PatchLinks prs={[19, 16]} />
         </Item>
@@ -301,11 +302,11 @@ export default function DevPanel() {
         </Item>
 
         <Item title="Reminders">
-          <P>A daily timer (16:00 HKT = 08:00 UTC) sends due-soon to-dos to Telegram.</P>
+          <P>A timer fires three times a day (08:30 / 16:00 / 22:00 HKT) and sends a Telegram digest of every open to-do, grouped by list — one message per list, so it buzzes several times like a mini-alarm. <C>scripts/send-due-reminders.mjs</C> runs standalone (no Next runtime); test rows never page.</P>
           <UL>
             <li><strong>D (Telegram vs D-12):</strong> D-12 says &quot;the app doesn't own alerting&quot; — its real concern was unreliable iOS web-push. Telegram is server-initiated and reliable, so it's kept as a <em>secondary</em> nudge; Google Calendar (.ics) stays the authoritative channel. This partially supersedes D-12.</li>
           </UL>
-          <PatchLinks prs={[18]} />
+          <PatchLinks prs={[18, 37]} />
         </Item>
 
         <Item title="Backups">
