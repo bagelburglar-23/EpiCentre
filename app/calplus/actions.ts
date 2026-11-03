@@ -2,7 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { addEvent, deleteEvent, updateEvent, markSyncedToGoogle } from "@/lib/events";
-import { isGoogleCalendarConnected, pushEventToGoogle } from "@/lib/google-calendar";
+import {
+  isGoogleCalendarConnected,
+  pushEventToGoogle,
+  updateGoogleEvent,
+  deleteGoogleEvent,
+} from "@/lib/google-calendar";
 
 export async function addEventAction(
   title: string,
@@ -41,11 +46,34 @@ export async function updateEventAction(
   end: string,
   allDay: boolean
 ) {
-  updateEvent(id, title, description, start, end, allDay);
+  const result = updateEvent(id, title, description, start, end, allDay);
+  // Propagate the edit to Google for EpiC-origin events (best-effort, same
+  // reasoning as the push on add: a Google failure must not lose the local
+  // save). Test rows and Google-sourced events never touch the API.
+  if (result.changed && result.gcalEventId && !result.isTest && isGoogleCalendarConnected()) {
+    try {
+      await updateGoogleEvent(result.gcalEventId, {
+        title,
+        description: description.trim() || null,
+        start,
+        end: end || start,
+        allDay,
+      });
+    } catch (e) {
+      console.error("Failed to update event on Google Calendar:", e);
+    }
+  }
   revalidatePath("/");
 }
 
 export async function deleteEventAction(id: number) {
-  deleteEvent(id);
+  const result = deleteEvent(id);
+  if (result.gcalEventId && !result.isTest && isGoogleCalendarConnected()) {
+    try {
+      await deleteGoogleEvent(result.gcalEventId);
+    } catch (e) {
+      console.error("Failed to delete event on Google Calendar:", e);
+    }
+  }
   revalidatePath("/");
 }

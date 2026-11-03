@@ -145,6 +145,55 @@ export async function pushEventToGoogle(event: {
   return data.id;
 }
 
+function calendarEventUrl(calendarId: string, eventId: string): string {
+  return `${calendarEventsUrl(calendarId)}/${encodeURIComponent(eventId)}`;
+}
+
+// Push an edit of an already-synced EpiC event back to Google (PATCH). Only
+// EpiC-origin events - those with a stored gcal_event_id, created via
+// pushEventToGoogle on "primary" - are updated this way. Google-sourced
+// events stay read-only in Cal+ (that is still the deferred two-way-sync
+// case; see this file's header).
+export async function updateGoogleEvent(
+  gcalEventId: string,
+  event: {
+    title: string;
+    description: string | null;
+    start: string;
+    end: string;
+    allDay: boolean;
+  }
+): Promise<void> {
+  const accessToken = await getAccessToken();
+  const res = await fetch(calendarEventUrl("primary", gcalEventId), {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      summary: event.title,
+      description: event.description ?? undefined,
+      start: toGoogleTime(event.start, event.allDay),
+      end: toGoogleTime(event.end, event.allDay),
+    }),
+  });
+  if (!res.ok) throw new Error(`Google event update failed: ${await res.text()}`);
+}
+
+// Delete an EpiC event from Google too. 404/410 means it is already gone
+// there (deleted directly in Google) - not an error for our purposes.
+export async function deleteGoogleEvent(gcalEventId: string): Promise<void> {
+  const accessToken = await getAccessToken();
+  const res = await fetch(calendarEventUrl("primary", gcalEventId), {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok && res.status !== 404 && res.status !== 410) {
+    throw new Error(`Google event delete failed: ${await res.text()}`);
+  }
+}
+
 export type FetchedGoogleEvent = {
   gcalEventId: string;
   title: string;

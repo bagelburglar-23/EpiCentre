@@ -85,16 +85,25 @@ export function addEvent(
   return { id: Number(info.lastInsertRowid), isTest: forcedTest };
 }
 
-export function deleteEvent(id: number): void {
-  getDb().prepare(`DELETE FROM events WHERE id = ?`).run(id);
+// Returns the deleted row's Google id + test flag so the action adapter can
+// also remove it from Google (EpiC-origin events only).
+export function deleteEvent(id: number): {
+  gcalEventId: string | null;
+  isTest: boolean;
+} {
+  const db = getDb();
+  const row = db
+    .prepare(`SELECT gcal_event_id, is_test FROM events WHERE id = ?`)
+    .get(id) as { gcal_event_id: string | null; is_test: number } | undefined;
+  db.prepare(`DELETE FROM events WHERE id = ?`).run(id);
+  return { gcalEventId: row?.gcal_event_id ?? null, isTest: !!row?.is_test };
 }
 
-// Deliberately does NOT push the edit to Google, even if the row already
-// has a gcal_event_id from an earlier push - syncing edits back to an
-// already-pushed event is the two-way-sync/conflict-resolution problem
-// the v1 scope explicitly deferred (see lib/google-calendar.ts's header).
-// An edited event that was already on Google will just diverge from its
-// Google copy until that's built.
+// Returns whether the row changed, plus its Google id + test flag, so the
+// action adapter can PATCH the same edit onto Google for EpiC-origin events
+// (those with a gcal_event_id from an earlier push). Pushing edits back to
+// Google was previously deferred; it is now wired for EpiC-origin events.
+// Google-SOURCED events are still not editable from Cal+ (read-only cache).
 export function updateEvent(
   id: number,
   title: string,
@@ -102,16 +111,26 @@ export function updateEvent(
   start: string,
   end: string,
   allDay: boolean
-): boolean {
+): { changed: boolean; gcalEventId: string | null; isTest: boolean } {
   const trimmedTitle = title.trim();
-  if (!trimmedTitle || !start) return false;
-  const info = getDb()
+  if (!trimmedTitle || !start) {
+    return { changed: false, gcalEventId: null, isTest: false };
+  }
+  const db = getDb();
+  const info = db
     .prepare(
       `UPDATE events SET title = ?, description = ?, start = ?, end = ?, all_day = ?, updated_at = datetime('now')
        WHERE id = ?`
     )
     .run(trimmedTitle, description.trim() || null, start, end || start, allDay ? 1 : 0, id);
-  return info.changes > 0;
+  const row = db
+    .prepare(`SELECT gcal_event_id, is_test FROM events WHERE id = ?`)
+    .get(id) as { gcal_event_id: string | null; is_test: number } | undefined;
+  return {
+    changed: info.changes > 0,
+    gcalEventId: row?.gcal_event_id ?? null,
+    isTest: !!row?.is_test,
+  };
 }
 
 export function markSyncedToGoogle(id: number, gcalEventId: string): void {
