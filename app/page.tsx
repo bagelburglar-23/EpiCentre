@@ -11,6 +11,7 @@ import CalPlusPanel from "@/components/CalPlusPanel";
 import BillsPanel from "@/components/BillsPanel";
 import EpiTraderPanel from "@/components/EpiTraderPanel";
 import EpiPlannerPanel from "@/components/EpiPlannerPanel";
+import DevPanel from "@/components/DevPanel";
 import SettingsPanel from "@/components/SettingsPanel";
 
 export default async function Home() {
@@ -84,6 +85,12 @@ export default async function Home() {
           label: "EpiPlanner",
           short: "Pl",
           content: <EpiPlannerPanel />,
+        },
+        {
+          id: "developer",
+          label: "EpiDev",
+          short: "Dv",
+          content: <DevPanel />,
         },
         {
           id: "settings",
