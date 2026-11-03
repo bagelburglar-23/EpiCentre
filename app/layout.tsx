@@ -68,7 +68,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       data-accent={accent}
       className={`${sans.variable} ${mono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground font-sans text-[13px] leading-snug">
+      <body className="h-full overflow-hidden bg-background text-foreground font-sans text-[14px] leading-snug sm:text-[13px]">
         {children}
       </body>
     </html>

@@ -393,7 +393,7 @@ export default function ListsPanel({
           ) : (
             <div key={l.id} className="group flex items-center">
               {railItem(l.id, l.name)}
-              <div className="ml-0.5 flex shrink-0 opacity-0 group-hover:opacity-100">
+              <div className="ml-0.5 flex shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
                 <button
                   onClick={() => {
                     setRenamingId(l.id);

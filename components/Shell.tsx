@@ -141,8 +141,11 @@ export default function Shell({ items }: { items: NavItem[] }) {
     );
   };
 
+  // fixed inset-0 pins the whole app to the viewport like a native shell: the
+  // page itself never scrolls or rubber-bands, only the inner <main> (and
+  // other explicit scroll areas) do. The column flips to a row on sm+.
   return (
-    <div className="flex h-[100dvh] w-full flex-col sm:flex-row">
+    <div className="fixed inset-0 flex w-full flex-col overflow-hidden overscroll-none sm:flex-row">
       {/* Desktop sidebar - replaced by the bottom nav on mobile. Pinned items
           (Settings) sit at the bottom, as most apps place settings. */}
       <nav className="hidden w-11 flex-col items-center gap-1 border-r border-accent-dim bg-black py-2 sm:flex">
@@ -264,28 +267,32 @@ export default function Shell({ items }: { items: NavItem[] }) {
           className="flex items-stretch border-t border-accent-dim bg-black sm:hidden"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
-          <div className="flex flex-1 items-stretch gap-1 overflow-x-auto px-1">
+          <div className="flex flex-1 items-stretch gap-1 overflow-x-auto overscroll-x-none px-1">
             {scrollItems.map((item) => (
               <div key={item.id} className="w-[4.5rem] shrink-0">
                 {navButton(item)}
               </div>
             ))}
           </div>
-          <button
-            onClick={() => window.location.reload()}
-            aria-label="Refresh"
-            className="flex shrink-0 flex-col items-center justify-center gap-0.5 border-l border-accent-dim px-2.5 py-1.5 font-mono text-[10px] text-foreground/50"
-          >
-            <span className="flex h-7 w-7 items-center justify-center text-base">
-              ↻
-            </span>
-            <span>Refresh</span>
-          </button>
-          {pinnedItems.map((item) => (
-            <div key={item.id} className="shrink-0 border-l border-accent-dim">
-              {navButton(item)}
-            </div>
-          ))}
+          {/* Utility cluster (refresh + Settings) - tinted so the scrolling
+              modules clearly end here instead of looking like a glitch. */}
+          <div className="flex shrink-0 items-stretch border-l border-accent-dim bg-accent-dim/30">
+            <button
+              onClick={() => window.location.reload()}
+              aria-label="Refresh"
+              className="flex shrink-0 flex-col items-center justify-center gap-0.5 px-2.5 py-1.5 font-mono text-[10px] text-foreground/60"
+            >
+              <span className="flex h-7 w-7 items-center justify-center text-base">
+                ↻
+              </span>
+              <span>Refresh</span>
+            </button>
+            {pinnedItems.map((item) => (
+              <div key={item.id} className="shrink-0 border-l border-accent-dim/60">
+                {navButton(item)}
+              </div>
+            ))}
+          </div>
         </nav>
       </div>
     </div>

@@ -127,6 +127,11 @@ const C = ({ children }: { children: ReactNode }) => (
 // --- Patch trail: newest first. Descriptions of pre-#15 PRs are
 // reconstructed from the repo; the recent ones are precise. ---
 const PATCHES: { pr: number; name: string; body: ReactNode }[] = [
+  { pr: 29, name: "Mobile layout overhaul", body: "Lock the app to the viewport like a native shell (no floating, no rubber-band bounce, no accidental horizontal swipe); tint the pinned Refresh/Settings cluster so scrolling modules don't look glitchy behind it; show list/bill rename+delete buttons on mobile (no hover there); larger base font on phones." },
+  { pr: 28, name: "UX tweaks: Dump, list delete choice, collapsible rails", body: "Rename the Inbox list to Dump (non-deletable); deleting a list asks whether to move its items to Dump or delete them too; EpiList/EpiSplit rails collapse; bills delete without a confirm; whole-app Refresh button." },
+  { pr: 27, name: "Per-module '?' deep-links", body: "A '?' in each module header opens EpiDev scrolled to that module's guide, via a tiny client nav-bus + a Shell listener." },
+  { pr: 26, name: "Bottom nav drops the Epi prefix", body: "Bottom-nav labels read List / Cal / Split / …; the full EpiX name stays in the mobile title bar." },
+  { pr: 25, name: "EpiDev — the living developer tab", body: "This tab: Frontend guide, Infrastructure (with the D- decisions and patch cross-links), and this patch trail." },
   { pr: 24, name: "EpiSplit — bill splitting", body: "New Bills module: people as columns, items as rows, cost + tax% per item and each person's share units; tax-inclusive cost split by shares, totals live. Stored as a JSON document per bill; verified against the manual Excel." },
   { pr: 23, name: "Mobile title bar + EpiX naming; Settings pinned", body: "Mobile title bar (clears the iOS status bar) names the current module. EpiX naming across modules (EpiList, EpiCal, EpiTrader, EpiPlanner) with 2-letter nav glyphs. Settings is the exception: a ☰ glyph pinned static while the others scroll." },
   { pr: 22, name: "Mobile-friendly shell", body: "App-style bottom navigation on phones instead of the cramped sidebar; full-width content, safe-area padding, 100dvh so browser chrome doesn't clip the nav." },
