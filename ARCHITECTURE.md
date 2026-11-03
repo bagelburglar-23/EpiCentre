@@ -3,6 +3,40 @@
 The whole design exists to satisfy one requirement: **see something, decide it
 needs a feature, ship it that day.** Everything below is downstream of that.
 
+---
+
+## ⚠️ As built (read this first)
+
+The sections below are the *original plan*. The app diverged from them and the
+divergence is deliberate — this note is the source of truth; the rest is
+rationale and aspiration. (The in-app **EpiDev** tab documents the same, kept
+current with each PR.)
+
+**What actually exists:**
+
+- **No `modules/` folder, no Drizzle, no registry.** A module is four files in
+  flat folders:
+  - `lib/<name>.ts` — data layer: types + read/mutation functions over SQLite.
+  - `app/<name>/actions.ts` — thin `"use server"` adapters calling the data
+    layer + `revalidatePath`.
+  - `components/<Name>Panel.tsx` — the `"use client"` UI.
+  - one entry in `app/page.tsx` registering the tab in `<Shell>`.
+- **Schema** is raw `CREATE TABLE IF NOT EXISTS` + additive `ALTER TABLE` in
+  one place, `lib/db.ts` `getDb()` — *not* drizzle-kit migrations. Changes are
+  **additive only** (the prod and UAT instances share one DB file).
+- **The Shell** (`components/Shell.tsx`) owns the nav, tabs, mobile bottom bar,
+  split-view and the per-module "?" deep-link; `components/SideRail.tsx` is the
+  shared left rail used by EpiList/EpiSplit/Settings.
+- **Standalone scripts** (`scripts/*.mjs`) can't import `lib/` (it pulls in
+  `next/server`), so shared script logic lives in `scripts/lib/*.mjs`
+  (`openDb`, `sendTelegram`, Google token/fetch).
+
+**What still holds from the plan below:** no module imports another (D-10);
+shared app code in `lib/`; the mutation-core + `"use server"` adapter split;
+tables carry `created_at`/`updated_at`/`is_test`; D-08/D-11/D-12/D-15/D-16.
+
+---
+
 ## Stack
 
 | layer | choice | why |

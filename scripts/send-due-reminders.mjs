@@ -9,7 +9,8 @@
 //
 // Usage: node scripts/send-due-reminders.mjs
 // Requires env: DATABASE_PATH, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
-import Database from "better-sqlite3";
+import { openDb } from "./lib/db.mjs";
+import { sendTelegram } from "./lib/telegram.mjs";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
@@ -19,9 +20,7 @@ if (!BOT_TOKEN || !CHAT_ID) {
   process.exit(0);
 }
 
-const path = process.env.DATABASE_PATH ?? "./epicentre.dev.db";
-const db = new Database(path);
-db.pragma("journal_mode = WAL");
+const db = openDb();
 
 // Every open, non-test to-do with its list name (NULL list = "Dump"). Ordered
 // so dated items lead, soonest first. Reminders are a production concern, so
@@ -76,21 +75,7 @@ const overdue = rows.filter((r) => r.due_date && r.due_date.slice(0, 10) < today
 const dueToday = rows.filter((r) => r.due_date && r.due_date.slice(0, 10) === today).length;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-async function send(html) {
-  const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: CHAT_ID,
-      text: html,
-      parse_mode: "HTML",
-      disable_web_page_preview: true,
-    }),
-  });
-  if (!res.ok) console.error("telegram send failed:", await res.text());
-  return res.ok;
-}
+const send = (html) => sendTelegram(BOT_TOKEN, CHAT_ID, html);
 
 // Lead summary, then one message per list (each its own notification).
 let summary = `<b>${greeting}</b>\n${rows.length} open across ${groups.size} list${

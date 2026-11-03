@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { parseReceipt, type ParsedItem } from "@/lib/receipt-parse";
+import Modal from "@/components/Modal";
 
 // Lightly clean an image for OCR: upscale small photos, greyscale, and bump
 // contrast. This is the main lever on tesseract's accuracy for receipts
@@ -186,14 +187,7 @@ export default function ReceiptScanner({
       )}
 
       {candidates && (
-        <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 pt-16"
-          onClick={() => setCandidates(null)}
-        >
-          <div
-            className="mx-3 w-full max-w-sm rounded border border-accent-dim bg-black p-4"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <Modal onClose={() => setCandidates(null)}>
             <h2 className="mb-2 font-mono text-xs uppercase tracking-wide text-accent-bright">
               Found {candidates.length} item{candidates.length === 1 ? "" : "s"}
             </h2>
@@ -258,8 +252,7 @@ export default function ReceiptScanner({
                 </button>
               )}
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </>
   );
