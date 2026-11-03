@@ -118,7 +118,11 @@ export default function Shell({ items }: { items: NavItem[] }) {
         >
           {glyph(item)}
         </span>
-        <span className="max-w-[4.5rem] truncate">{item.label}</span>
+        {/* Bottom nav drops the "Epi" prefix (EpiList -> List); the full
+            name shows only in the mobile title bar. */}
+        <span className="max-w-[4.5rem] truncate">
+          {item.label.replace(/^Epi/, "")}
+        </span>
       </button>
     );
   };
