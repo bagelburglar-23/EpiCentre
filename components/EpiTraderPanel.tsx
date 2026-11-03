@@ -7,12 +7,17 @@
 // Nothing from the bank's book - positions, sizes, client flow, P&L -
 // ever lands in EpiCentre. That line is drawn here on purpose.
 
+import HelpButton from "@/components/HelpButton";
+
 export default function EpiTraderPanel() {
   return (
     <div className="mx-auto max-w-xl p-6">
-      <h1 className="mb-1 font-mono text-sm uppercase tracking-wide text-accent-bright">
-        EpiTrader
-      </h1>
+      <div className="mb-1 flex items-center justify-between">
+        <h1 className="font-mono text-sm uppercase tracking-wide text-accent-bright">
+          EpiTrader
+        </h1>
+        <HelpButton section="guide-epitrader" />
+      </div>
       <p className="mb-4 text-sm text-foreground/60">
         Empty shell — nothing wired up yet.
       </p>

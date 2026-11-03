@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { addEventAction, updateEventAction, deleteEventAction } from "@/app/calplus/actions";
 import type { CalEvent, CachedGoogleEvent } from "@/lib/events";
+import HelpButton from "@/components/HelpButton";
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -475,9 +476,12 @@ export default function CalPlusPanel({
   return (
     <div className="flex h-full flex-col p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="font-mono text-sm uppercase tracking-wide text-accent-bright">
-          Cal+
-        </h1>
+        <div className="flex items-center gap-2">
+          <h1 className="font-mono text-sm uppercase tracking-wide text-accent-bright">
+            Cal+
+          </h1>
+          <HelpButton section="guide-calplus" />
+        </div>
         <div className="flex items-center gap-2 font-mono text-xs">
           <div className="flex overflow-hidden rounded border border-accent-dim">
             {(["month", "week", "day"] as ViewMode[]).map((m) => (
