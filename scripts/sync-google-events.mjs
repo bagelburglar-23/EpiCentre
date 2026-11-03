@@ -88,7 +88,7 @@ for (const cal of calendars ?? []) {
   }
   const { items } = await eventsRes.json();
   for (const e of items ?? []) {
-    allEvents.push({ ...e, calendarName: cal.summary ?? cal.id });
+    allEvents.push({ ...e, calendarName: cal.summary ?? cal.id, calendarId: cal.id });
   }
 }
 
@@ -97,8 +97,8 @@ for (const cal of calendars ?? []) {
 // calendars now that multiple are pulled; a rare collision would abort the
 // whole replaceAll transaction otherwise.
 const insert = db.prepare(
-  `INSERT OR REPLACE INTO google_events_cache (gcal_event_id, title, description, start, end, all_day, calendar_name, synced_at)
-   VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+  `INSERT OR REPLACE INTO google_events_cache (gcal_event_id, title, description, start, end, all_day, calendar_name, calendar_id, synced_at)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
 );
 const replaceAll = db.transaction((events) => {
   db.prepare(`DELETE FROM google_events_cache`).run();
@@ -111,7 +111,8 @@ const replaceAll = db.transaction((events) => {
       allDay ? `${e.start.date}T00:00:00` : e.start.dateTime,
       allDay ? `${e.end.date}T00:00:00` : e.end.dateTime,
       allDay ? 1 : 0,
-      e.calendarName
+      e.calendarName,
+      e.calendarId
     );
   }
 });
