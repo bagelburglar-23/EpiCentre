@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { getDeployedSha } from "@/lib/db";
 import "./globals.css";
@@ -48,6 +48,16 @@ export const metadata: Metadata = {
     apple: [{ url: icon192, sizes: "192x192", type: "image/png" }],
     other: [{ rel: "icon", url: icon512, sizes: "512x512", type: "image/png" }],
   },
+};
+
+// Mobile viewport: fill the screen edge-to-edge (viewport-fit=cover lets the
+// bottom nav's safe-area padding reach under the iOS home indicator) and let
+// the dark theme colour the status bar area. Zoom is left enabled.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#000000",
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
