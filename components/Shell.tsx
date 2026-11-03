@@ -146,6 +146,14 @@ export default function Shell({ items }: { items: NavItem[] }) {
       {/* Desktop sidebar - replaced by the bottom nav on mobile. Pinned items
           (Settings) sit at the bottom, as most apps place settings. */}
       <nav className="hidden w-11 flex-col items-center gap-1 border-r border-accent-dim bg-black py-2 sm:flex">
+        <button
+          onClick={() => window.location.reload()}
+          title="Refresh (reload for new data / updates)"
+          aria-label="Refresh"
+          className="mb-1 flex h-8 w-8 items-center justify-center rounded font-mono text-base text-foreground/50 hover:bg-accent-dim hover:text-accent-bright"
+        >
+          ↻
+        </button>
         {scrollItems.map((item) => (
           <button
             key={item.id}
@@ -263,6 +271,16 @@ export default function Shell({ items }: { items: NavItem[] }) {
               </div>
             ))}
           </div>
+          <button
+            onClick={() => window.location.reload()}
+            aria-label="Refresh"
+            className="flex shrink-0 flex-col items-center justify-center gap-0.5 border-l border-accent-dim px-2.5 py-1.5 font-mono text-[10px] text-foreground/50"
+          >
+            <span className="flex h-7 w-7 items-center justify-center text-base">
+              ↻
+            </span>
+            <span>Refresh</span>
+          </button>
           {pinnedItems.map((item) => (
             <div key={item.id} className="shrink-0 border-l border-accent-dim">
               {navButton(item)}

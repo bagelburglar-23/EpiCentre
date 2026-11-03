@@ -13,7 +13,7 @@ export async function renameListAction(id: number, name: string) {
   revalidatePath("/");
 }
 
-export async function deleteListAction(id: number) {
-  deleteList(id);
+export async function deleteListAction(id: number, deleteItems: boolean) {
+  deleteList(id, deleteItems);
   revalidatePath("/");
 }

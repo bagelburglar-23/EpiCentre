@@ -47,6 +47,7 @@ export default function BillsPanel({
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newTest, setNewTest] = useState(false);
+  const [railOpen, setRailOpen] = useState(true);
   const [, startTransition] = useTransition();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -154,8 +155,6 @@ export default function BillsPanel({
     setNewTest(false);
   }
   function removeBill(id: number) {
-    const b = bills.find((x) => x.id === id);
-    if (!confirm(`Delete bill "${b?.name}"? This can't be undone.`)) return;
     if (selectedId === id) {
       if (timer.current) clearTimeout(timer.current);
       setSelectedId(null);
@@ -178,12 +177,23 @@ export default function BillsPanel({
   return (
     <div className="flex h-full">
       {/* Bill rail */}
+      {railOpen ? (
       <aside className="flex w-36 shrink-0 flex-col gap-1 border-r border-accent-dim bg-black p-2">
         <div className="mb-1 flex items-center justify-between px-1">
           <h1 className="font-mono text-sm uppercase tracking-wide text-accent-bright">
             Bills
           </h1>
-          <HelpButton section="guide-bills" />
+          <div className="flex items-center gap-1">
+            <HelpButton section="guide-bills" />
+            <button
+              onClick={() => setRailOpen(false)}
+              aria-label="Collapse bills"
+              title="Collapse"
+              className="rounded px-1 text-foreground/40 hover:text-accent-bright"
+            >
+              ‹
+            </button>
+          </div>
         </div>
         {bills.map((b) => (
           <div key={b.id} className="group flex items-center">
@@ -243,6 +253,18 @@ export default function BillsPanel({
           </label>
         )}
       </aside>
+      ) : (
+        <aside className="flex w-8 shrink-0 flex-col items-center border-r border-accent-dim bg-black py-2">
+          <button
+            onClick={() => setRailOpen(true)}
+            aria-label="Expand bills"
+            title="Bills"
+            className="rounded px-1 font-mono text-sm text-foreground/50 hover:text-accent-bright"
+          >
+            ›
+          </button>
+        </aside>
+      )}
 
       {/* Editor */}
       {!selected ? (
