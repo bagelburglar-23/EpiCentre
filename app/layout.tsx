@@ -72,6 +72,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${sans.variable} ${mono.variable} h-full antialiased`}
     >
       <body className="h-full overflow-hidden bg-background text-foreground font-sans text-[14px] leading-snug sm:text-[13px]">
+        {/* Apply the saved text-size preference before paint (no flash). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var p=JSON.parse(localStorage.getItem('epicentre.prefs')||'{}');var s={small:'15px',normal:'16px',large:'18px'}[p.textSize||'normal'];if(s)document.documentElement.style.fontSize=s}catch(e){}`,
+          }}
+        />
         {children}
       </body>
     </html>

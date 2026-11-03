@@ -127,6 +127,7 @@ const C = ({ children }: { children: ReactNode }) => (
 // --- Patch trail: newest first. Descriptions of pre-#15 PRs are
 // reconstructed from the repo; the recent ones are precise. ---
 const PATCHES: { pr: number; name: string; body: ReactNode }[] = [
+  { pr: 39, name: "Settings build-out", body: "Settings gets a proper sidebar (via the shared SideRail): Account (password), Appearance (text size — scales most of the UI, per-device), EpiSplit (default tax rate), Reminders (the three digest times), and About (into EpiDev). Prefs live per-device in localStorage; text size applies pre-paint so there's no flash." },
   { pr: 38, name: "Shared SideRail component", body: "Extracted the collapsible left rail (title, ? help link, collapse toggle, footer slot) into one <SideRail> used by EpiList and EpiSplit (and Settings next). Pure refactor — behaviour unchanged — so future rail tweaks land in one place for every module that uses it." },
   { pr: 37, name: "Telegram reminders: 3×-daily per-list digest", body: "Reminders now fire at 08:30 / 16:00 / 22:00 HKT (was just 16:00) and send a digest of every OPEN to-do grouped by list — one message per list, so it buzzes several times like a mini-alarm. Leads with a time-aware greeting; flags overdue (🔴) and due-today (🟡). Test rows never page." },
   { pr: 36, name: "EpiSplit grid nav + tax defaults", body: "Full spreadsheet keys in the grid: arrow keys move cell-to-cell (↓ / Enter go down; ←/→ hop columns only at the text edge, so you can still edit within a cell), Ctrl/Cmd+arrows jump to the first/last row or column, Ctrl/Cmd+D fills a column. Tax defaults to 20% for new items and scanned batches (inheriting the last item's rate when it has one); a scanned batch autofills its rate once, then each item is editable." },
@@ -237,8 +238,8 @@ export default function DevPanel() {
         </Item>
 
         <Item title="Settings" id="guide-settings">
-          <P>Change the app password from any logged-in device (no SSH). One password shared by prod and UAT. Pinned as ☰ in the nav.</P>
-          <PatchLinks prs={[13]} />
+          <P>A sidebar of sections: <strong>Account</strong> (change the app password, any device, no SSH), <strong>Appearance</strong> (text size — per-device), <strong>EpiSplit</strong> (default tax rate), <strong>Reminders</strong> (the three digest times), and <strong>About</strong> (into EpiDev). Pinned as ☰ in the nav.</P>
+          <PatchLinks prs={[13, 39]} />
         </Item>
       </Section>
 
