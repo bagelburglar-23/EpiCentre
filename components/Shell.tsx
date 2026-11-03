@@ -5,6 +5,9 @@ import { useEffect, useState, type ReactNode } from "react";
 export type NavItem = {
   id: string;
   label: string;
+  // Sidebar glyph. Falls back to the label's first letter; set it where two
+  // labels would otherwise collide (EpiTrader / EpiPlanner both -> "E").
+  short?: string;
   content: ReactNode;
 };
 
@@ -22,6 +25,9 @@ export default function Shell({ items }: { items: NavItem[] }) {
   const [loaded, setLoaded] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- restoring persisted UI
+     state (open tabs) is only possible after mount: localStorage is not
+     available during SSR, so this seeds state once on the client. */
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -45,6 +51,7 @@ export default function Shell({ items }: { items: NavItem[] }) {
     // stable for a given deploy, so this intentionally runs once on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!loaded) return; // don't clobber storage with the initial empty state
@@ -101,7 +108,7 @@ export default function Shell({ items }: { items: NavItem[] }) {
                 : "text-foreground/60 hover:bg-accent-dim hover:text-accent-bright"
             }`}
           >
-            {item.label.slice(0, 1)}
+            {item.short ?? item.label.slice(0, 1)}
           </button>
         ))}
       </nav>

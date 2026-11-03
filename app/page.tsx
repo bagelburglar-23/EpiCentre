@@ -7,6 +7,8 @@ import { isGoogleCalendarConnected } from "@/lib/google-calendar";
 import Shell from "@/components/Shell";
 import ListsPanel from "@/components/ListsPanel";
 import CalPlusPanel from "@/components/CalPlusPanel";
+import EpiTraderPanel from "@/components/EpiTraderPanel";
+import EpiPlannerPanel from "@/components/EpiPlannerPanel";
 import SettingsPanel from "@/components/SettingsPanel";
 
 export default async function Home() {
@@ -59,6 +61,18 @@ export default async function Home() {
               isPreview={isPreview}
             />
           ),
+        },
+        {
+          id: "epitrader",
+          label: "EpiTrader",
+          short: "Tr",
+          content: <EpiTraderPanel />,
+        },
+        {
+          id: "epiplanner",
+          label: "EpiPlanner",
+          short: "Pl",
+          content: <EpiPlannerPanel />,
         },
         {
           id: "settings",
