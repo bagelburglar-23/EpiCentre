@@ -15,6 +15,7 @@ import {
 import type { Todo } from "@/lib/todos";
 import type { List } from "@/lib/lists";
 import SideRail from "@/components/SideRail";
+import Modal from "@/components/Modal";
 
 function isOverdue(dueDate: string | null, done: boolean): boolean {
   if (!dueDate || done) return false;
@@ -535,14 +536,7 @@ export default function ListsPanel({
       )}
 
       {deletingList != null && (
-        <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 pt-24"
-          onClick={() => setDeletingList(null)}
-        >
-          <div
-            className="w-full max-w-sm rounded border border-accent-dim bg-black p-4"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <Modal onClose={() => setDeletingList(null)}>
             <h2 className="mb-2 font-mono text-xs uppercase tracking-wide text-accent-bright">
               Delete list “{deletingObj?.name}”
             </h2>
@@ -585,8 +579,7 @@ export default function ListsPanel({
                 Cancel
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

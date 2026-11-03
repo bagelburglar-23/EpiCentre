@@ -2,7 +2,7 @@
 // next/server's connection() and only resolves inside Next's own runtime.
 // Run directly with plain `node` from CI after a successful deploy:
 //   node scripts/record-deploy.mjs <production|preview> <commit-sha>
-import Database from "better-sqlite3";
+import { openDb } from "./lib/db.mjs";
 
 const [environment, commitSha] = process.argv.slice(2);
 if (!["production", "preview"].includes(environment) || !commitSha) {
@@ -10,9 +10,7 @@ if (!["production", "preview"].includes(environment) || !commitSha) {
   process.exit(1);
 }
 
-const path = process.env.DATABASE_PATH ?? "./epicentre.dev.db";
-const db = new Database(path);
-db.pragma("journal_mode = WAL");
+const db = openDb();
 db.exec(`
   CREATE TABLE IF NOT EXISTS deploy_state (
     environment TEXT PRIMARY KEY,
