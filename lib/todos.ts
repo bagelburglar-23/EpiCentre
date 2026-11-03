@@ -8,6 +8,7 @@ export type Todo = {
   dueDate: string | null; // ISO date (YYYY-MM-DD), no time component
   done: boolean;
   isTest: boolean;
+  listId: number | null; // null = Inbox (see lib/lists.ts)
 };
 
 type Row = {
@@ -17,6 +18,7 @@ type Row = {
   due_date: string | null;
   done: number;
   is_test: number;
+  list_id: number | null;
 };
 
 function toTodo(r: Row): Todo {
@@ -27,6 +29,7 @@ function toTodo(r: Row): Todo {
     dueDate: r.due_date,
     done: !!r.done,
     isTest: !!r.is_test,
+    listId: r.list_id,
   };
 }
 
@@ -38,8 +41,8 @@ export async function listTodos(): Promise<Todo[]> {
   const rows = getDb()
     .prepare(
       isProduction()
-        ? `SELECT id, text, details, due_date, done, is_test FROM todos WHERE is_test = 0 ORDER BY (due_date IS NULL), due_date ASC, created_at ASC`
-        : `SELECT id, text, details, due_date, done, is_test FROM todos ORDER BY (due_date IS NULL), due_date ASC, created_at ASC`
+        ? `SELECT id, text, details, due_date, done, is_test, list_id FROM todos WHERE is_test = 0 ORDER BY (due_date IS NULL), due_date ASC, created_at ASC`
+        : `SELECT id, text, details, due_date, done, is_test, list_id FROM todos ORDER BY (due_date IS NULL), due_date ASC, created_at ASC`
     )
     .all() as Row[];
   return rows.map(toTodo);
@@ -53,7 +56,8 @@ export function addTodo(
   title: string,
   details: string,
   dueDate: string,
-  isTest: boolean
+  isTest: boolean,
+  listId: number | null
 ): void {
   const trimmedTitle = title.trim();
   if (!trimmedTitle) return;
@@ -63,10 +67,16 @@ export function addTodo(
   const forcedTest = isProduction() ? false : isTest;
   getDb()
     .prepare(
-      `INSERT INTO todos (text, details, due_date, is_test, updated_at)
-       VALUES (?, ?, ?, ?, datetime('now'))`
+      `INSERT INTO todos (text, details, due_date, is_test, list_id, updated_at)
+       VALUES (?, ?, ?, ?, ?, datetime('now'))`
     )
-    .run(trimmedTitle, details.trim() || null, dueDate || null, forcedTest ? 1 : 0);
+    .run(
+      trimmedTitle,
+      details.trim() || null,
+      dueDate || null,
+      forcedTest ? 1 : 0,
+      listId ?? null
+    );
 }
 
 // Idempotent: same input twice leaves the same row. If the due date
@@ -76,7 +86,8 @@ export function updateTodo(
   id: number,
   title: string,
   details: string,
-  dueDate: string
+  dueDate: string,
+  listId: number | null
 ): void {
   const trimmedTitle = title.trim();
   if (!trimmedTitle) return;
@@ -85,10 +96,17 @@ export function updateTodo(
       `UPDATE todos
        SET text = ?, details = ?,
            reminder_sent = CASE WHEN due_date IS ? THEN reminder_sent ELSE 0 END,
-           due_date = ?, updated_at = datetime('now')
+           due_date = ?, list_id = ?, updated_at = datetime('now')
        WHERE id = ?`
     )
-    .run(trimmedTitle, details.trim() || null, dueDate || null, dueDate || null, id);
+    .run(
+      trimmedTitle,
+      details.trim() || null,
+      dueDate || null,
+      dueDate || null,
+      listId ?? null,
+      id
+    );
 }
 
 export function toggleTodo(id: number): void {

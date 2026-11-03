@@ -1,10 +1,11 @@
 import { connection } from "next/server";
 import { listTodos } from "@/lib/todos";
+import { listLists } from "@/lib/lists";
 import { listEventsInRange, listCachedGoogleEvents } from "@/lib/events";
 import { isProduction } from "@/lib/db";
 import { isGoogleCalendarConnected } from "@/lib/google-calendar";
 import Shell from "@/components/Shell";
-import TodoPanel from "@/components/TodoPanel";
+import ListsPanel from "@/components/ListsPanel";
 import CalPlusPanel from "@/components/CalPlusPanel";
 import SettingsPanel from "@/components/SettingsPanel";
 
@@ -25,8 +26,9 @@ export default async function Home() {
   const rangeStart = new Date(Date.UTC(now.getUTCFullYear() - 1, 0, 1)).toISOString();
   const rangeEnd = new Date(Date.UTC(now.getUTCFullYear() + 1, 11, 31)).toISOString();
 
-  const [todos, events, googleEvents] = await Promise.all([
+  const [todos, lists, events, googleEvents] = await Promise.all([
     listTodos(),
+    listLists(),
     listEventsInRange(rangeStart, rangeEnd),
     listCachedGoogleEvents(rangeStart, rangeEnd),
   ]);
@@ -36,9 +38,15 @@ export default async function Home() {
     <Shell
       items={[
         {
-          id: "todo",
-          label: "To-Do",
-          content: <TodoPanel initialTodos={todos} isPreview={isPreview} />,
+          id: "lists",
+          label: "Lists",
+          content: (
+            <ListsPanel
+              initialLists={lists}
+              initialTodos={todos}
+              isPreview={isPreview}
+            />
+          ),
         },
         {
           id: "calplus",
