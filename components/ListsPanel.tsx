@@ -14,6 +14,7 @@ import {
 } from "@/app/lists/actions";
 import type { Todo } from "@/lib/todos";
 import type { List } from "@/lib/lists";
+import HelpButton from "@/components/HelpButton";
 
 function isOverdue(dueDate: string | null, done: boolean): boolean {
   if (!dueDate || done) return false;
@@ -353,9 +354,12 @@ export default function ListsPanel({
     <div className="flex h-full">
       {/* List rail */}
       <aside className="flex w-40 shrink-0 flex-col gap-1 border-r border-accent-dim bg-black p-2">
-        <h1 className="mb-1 px-1 font-mono text-sm uppercase tracking-wide text-accent-bright">
-          Lists
-        </h1>
+        <div className="mb-1 flex items-center justify-between px-1">
+          <h1 className="font-mono text-sm uppercase tracking-wide text-accent-bright">
+            Lists
+          </h1>
+          <HelpButton section="guide-lists" />
+        </div>
         {railItem(null, "Inbox")}
         {lists.map((l) =>
           renamingId === l.id ? (

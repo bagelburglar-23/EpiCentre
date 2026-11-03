@@ -3,6 +3,7 @@
 import { useActionState, useRef } from "react";
 import { changePasswordAction } from "@/app/settings/actions";
 import PasswordInput from "@/components/PasswordInput";
+import HelpButton from "@/components/HelpButton";
 
 export default function SettingsPanel() {
   const formRef = useRef<HTMLFormElement>(null);
@@ -17,9 +18,12 @@ export default function SettingsPanel() {
 
   return (
     <div className="flex h-full flex-col p-4">
-      <h1 className="mb-3 font-mono text-sm uppercase tracking-wide text-accent-bright">
-        Settings
-      </h1>
+      <div className="mb-3 flex max-w-xs items-center justify-between">
+        <h1 className="font-mono text-sm uppercase tracking-wide text-accent-bright">
+          Settings
+        </h1>
+        <HelpButton section="guide-settings" />
+      </div>
 
       <form
         ref={formRef}
@@ -54,7 +58,7 @@ export default function SettingsPanel() {
         )}
         {state.success && (
           <p className="font-mono text-xs text-foreground/60">
-            Password changed. This applies immediately — you won't be logged out
+            Password changed. This applies immediately — you won’t be logged out
             on this device, but other devices will need the new password next
             time they log in.
           </p>

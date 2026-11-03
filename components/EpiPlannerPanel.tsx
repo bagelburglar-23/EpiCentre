@@ -2,6 +2,8 @@
 // now (no interactivity). The list below is a proposal, not a commitment -
 // it's here so the empty tab still tells you what it's meant to become.
 
+import HelpButton from "@/components/HelpButton";
+
 export default function EpiPlannerPanel() {
   const ideas: [string, string][] = [
     ["Link stash", "Paste a URL; a server action fetches its title/favicon (no Claude) so saved places/articles read cleanly."],
@@ -13,9 +15,12 @@ export default function EpiPlannerPanel() {
   ];
   return (
     <div className="mx-auto max-w-xl p-6">
-      <h1 className="mb-1 font-mono text-sm uppercase tracking-wide text-accent-bright">
-        EpiPlanner
-      </h1>
+      <div className="mb-1 flex items-center justify-between">
+        <h1 className="font-mono text-sm uppercase tracking-wide text-accent-bright">
+          EpiPlanner
+        </h1>
+        <HelpButton section="guide-epiplanner" />
+      </div>
       <p className="mb-4 text-sm text-foreground/60">
         Empty shell — a neat place to stash links and play with itineraries.
       </p>

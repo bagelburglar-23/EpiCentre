@@ -13,6 +13,7 @@ import {
   type BillData,
   type BillItem,
 } from "@/lib/bill-calc";
+import HelpButton from "@/components/HelpButton";
 
 function uid(): string {
   try {
@@ -178,9 +179,12 @@ export default function BillsPanel({
     <div className="flex h-full">
       {/* Bill rail */}
       <aside className="flex w-36 shrink-0 flex-col gap-1 border-r border-accent-dim bg-black p-2">
-        <h1 className="mb-1 px-1 font-mono text-sm uppercase tracking-wide text-accent-bright">
-          Bills
-        </h1>
+        <div className="mb-1 flex items-center justify-between px-1">
+          <h1 className="font-mono text-sm uppercase tracking-wide text-accent-bright">
+            Bills
+          </h1>
+          <HelpButton section="guide-bills" />
+        </div>
         {bills.map((b) => (
           <div key={b.id} className="group flex items-center">
             <button

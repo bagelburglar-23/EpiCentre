@@ -65,6 +65,20 @@ export default function Shell({ items }: { items: NavItem[] }) {
     }
   }, [openTabs, activeTab, loaded]);
 
+  // A module's "?" (HelpButton) asks to open EpiDev via the nav bus; the
+  // target panel reads the section itself. Functional setState -> no stale
+  // closure, so the empty dep list is correct.
+  useEffect(() => {
+    function onNav(e: Event) {
+      const id = (e as CustomEvent).detail?.tab as string | undefined;
+      if (!id) return;
+      setOpenTabs((prev) => (prev.includes(id) ? prev : [...prev, id]));
+      setActiveTab(id);
+    }
+    window.addEventListener("epicentre:navigate", onNav);
+    return () => window.removeEventListener("epicentre:navigate", onNav);
+  }, []);
+
   function openTab(id: string) {
     setOpenTabs((prev) => (prev.includes(id) ? prev : [...prev, id]));
     setActiveTab(id);

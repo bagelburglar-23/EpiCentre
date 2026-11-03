@@ -2,7 +2,8 @@
 /* eslint-disable react/no-unescaped-entities -- this is a prose-heavy doc
    component; raw apostrophes in copy are intentional and readable. */
 
-import { type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
+import { consumePendingSection } from "@/lib/nav-bus";
 
 // EpiDev - the living developer tab. Three sections (Frontend guide,
 // Infrastructure, Patch notes), all built from native <details> so they are
@@ -20,11 +21,15 @@ function openAncestors(el: HTMLElement) {
   }
 }
 
-function jumpToPatch(pr: number) {
-  const el = document.getElementById(`patch-${pr}`);
+function jumpTo(id: string) {
+  const el = document.getElementById(id);
   if (!el) return;
   openAncestors(el);
   el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function jumpToPatch(pr: number) {
+  jumpTo(`patch-${pr}`);
 }
 
 // A compact chip that jumps to a patch note.
@@ -148,6 +153,16 @@ const PATCHES: { pr: number; name: string; body: ReactNode }[] = [
 ];
 
 export default function DevPanel() {
+  // When opened via a module's "?", scroll to that module's guide section.
+  // Runs on mount because the Shell mounts this panel fresh each time EpiDev
+  // becomes active; a short delay lets the <details> render first.
+  useEffect(() => {
+    const section = consumePendingSection();
+    if (!section) return;
+    const t = setTimeout(() => jumpTo(section), 40);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
     <div className="mx-auto max-w-3xl p-4">
       <h1 className="mb-1 font-mono text-sm uppercase tracking-wide text-accent-bright">
