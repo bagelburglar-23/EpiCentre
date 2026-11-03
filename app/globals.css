@@ -36,7 +36,19 @@
   --font-mono: var(--font-mono);
 }
 
+/* Lock the app to the viewport like a native app: no page scroll, no
+   rubber-band bounce, no accidental horizontal swipe. Inner scroll regions
+   (a module's <main>, the calendar grid, the bottom-nav rail) still scroll.
+   -webkit-text-size-adjust keeps iOS from silently inflating text. */
+html {
+  height: 100%;
+  -webkit-text-size-adjust: 100%;
+}
 body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
   background: var(--background);
   color: var(--foreground);
 }

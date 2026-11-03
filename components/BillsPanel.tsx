@@ -215,7 +215,7 @@ export default function BillsPanel({
             <button
               onClick={() => removeBill(b.id)}
               aria-label={`Delete ${b.name}`}
-              className="shrink-0 px-1 text-foreground/40 opacity-0 hover:text-accent-bright group-hover:opacity-100"
+              className="shrink-0 px-1 text-foreground/40 opacity-100 hover:text-accent-bright sm:opacity-0 sm:group-hover:opacity-100"
             >
               ✕
             </button>
