@@ -127,6 +127,7 @@ const C = ({ children }: { children: ReactNode }) => (
 // --- Patch trail: newest first. Descriptions of pre-#15 PRs are
 // reconstructed from the repo; the recent ones are precise. ---
 const PATCHES: { pr: number; name: string; body: ReactNode }[] = [
+  { pr: 33, name: "OCR input sources", body: "Desktop scans from the clipboard — paste a copied receipt image or press Cmd/Ctrl+V, no file dialog. Mobile's picker now offers both the photo gallery and the camera (removed the camera-only lock)." },
   { pr: 32, name: "EpiSplit receipt OCR", body: "Scan a receipt photo to add items: tesseract.js reads it entirely in the browser (no AI tokens, no server), a heuristic parser pulls name+price lines, and you review/untick/edit them before they're added. First scan downloads the English model (~a couple MB), cached after." },
   { pr: 31, name: "Lock zoom + stop review requests", body: "Disable pinch-zoom on mobile so the app stays put like a native shell (pairs with the #29 viewport lock); drop the automatic PR review-request step — no more GitHub review pings, just open the PR and hit merge." },
   { pr: 30, name: "EpiCal two-way Google edit", body: "Events pulled from Google can be edited and deleted from Cal+ too - the change PATCH/DELETEs the event on its own Google calendar and mirrors into the local cache. Activates once this reaches prod and the sync tags each cached event with its calendar id." },
@@ -212,9 +213,9 @@ export default function DevPanel() {
             <li><C>+ Bill</C> in the rail, then <C>+ Person</C> (columns) and <C>+ Item</C> (rows).</li>
             <li>Per item: cost, tax %, and each person's <em>share units</em> (leave blank = not sharing).</li>
             <li>Each item's tax-inclusive cost is split in proportion to shares; the <strong>Owed</strong> row shows each person's total, live. Edits autosave.</li>
-            <li><strong>Scan receipt:</strong> snap a photo — OCR runs in your browser (no AI tokens) and pulls the line items for you to review/edit before adding. First scan downloads a small English model, then it's cached.</li>
+            <li><strong>Scan receipt:</strong> on mobile snap a photo or pick from your gallery; on desktop paste a copied image (Cmd/Ctrl+V). OCR runs in your browser (no AI tokens) and pulls the line items to review/edit before adding. First scan downloads a small English model, then it's cached.</li>
           </UL>
-          <PatchLinks prs={[24, 32]} />
+          <PatchLinks prs={[24, 32, 33]} />
         </Item>
 
         <Item title="EpiTrader — personal portfolio (shell)" id="guide-epitrader">
