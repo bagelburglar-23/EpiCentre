@@ -27,6 +27,9 @@ export default function Shell({ items }: { items: NavItem[] }) {
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  // Split view: the module shown in a second pane beside/below the primary
+  // (which the sidebar/bottom-nav still drives). null = single pane.
+  const [secondary, setSecondary] = useState<string | null>(null);
 
   /* eslint-disable react-hooks/set-state-in-effect -- restoring persisted UI
      state (open tabs) is only possible after mount: localStorage is not
@@ -105,8 +108,25 @@ export default function Shell({ items }: { items: NavItem[] }) {
     });
   }
 
+  function toggleSplit() {
+    setSecondary((prev) =>
+      prev !== null
+        ? null
+        : items.find((i) => i.id !== activeTab && !i.pinned)?.id ??
+          items.find((i) => i.id !== activeTab)?.id ??
+          activeTab
+    );
+  }
+
   const byId = Object.fromEntries(items.map((i) => [i.id, i]));
   const glyph = (item: NavItem) => item.short ?? item.label.slice(0, 1);
+  const emptyState = (
+    <div className="flex h-full items-center justify-center p-6 text-center font-mono text-xs text-foreground/30">
+      Select something to get started.
+    </div>
+  );
+  const paneContent = (id: string | null) =>
+    id && byId[id] ? byId[id].content : emptyState;
   const scrollItems = items.filter((i) => !i.pinned);
   const pinnedItems = items.filter((i) => i.pinned);
   const activeItem = activeTab ? byId[activeTab] : null;
@@ -157,6 +177,19 @@ export default function Shell({ items }: { items: NavItem[] }) {
         >
           ↻
         </button>
+        <button
+          onClick={toggleSplit}
+          disabled={!activeTab}
+          title={secondary !== null ? "Close split view" : "Split view (two modules)"}
+          aria-label="Toggle split view"
+          className={`mb-1 flex h-8 w-8 items-center justify-center rounded font-mono text-base disabled:opacity-30 ${
+            secondary !== null
+              ? "bg-accent text-black"
+              : "text-foreground/50 hover:bg-accent-dim hover:text-accent-bright"
+          }`}
+        >
+          ⊟
+        </button>
         {scrollItems.map((item) => (
           <button
             key={item.id}
@@ -196,12 +229,21 @@ export default function Shell({ items }: { items: NavItem[] }) {
             the iOS status bar (safe-area-inset-top). Hidden on desktop. */}
         {showTitleBar && (
           <div
-            className="flex items-center border-b border-accent-dim bg-black px-4 sm:hidden"
+            className="flex items-center justify-between border-b border-accent-dim bg-black px-4 sm:hidden"
             style={{ paddingTop: "env(safe-area-inset-top)" }}
           >
             <span className="py-2.5 font-mono text-sm uppercase tracking-wide text-accent-bright">
               {activeItem?.label}
             </span>
+            <button
+              onClick={toggleSplit}
+              aria-label="Toggle split view"
+              className={`rounded px-1.5 py-1 font-mono text-base ${
+                secondary !== null ? "text-accent-bright" : "text-foreground/50"
+              }`}
+            >
+              ⊟
+            </button>
           </div>
         )}
 
@@ -246,16 +288,53 @@ export default function Shell({ items }: { items: NavItem[] }) {
         )}
 
         <main
-          className="min-h-0 flex-1 overflow-auto bg-background"
+          className="min-h-0 flex-1 overflow-hidden bg-background"
           // When the mobile title bar is hidden (Settings / empty state),
           // <main> clears the status bar itself. 0 on desktop (inset is 0).
           style={{ paddingTop: showTitleBar ? undefined : "env(safe-area-inset-top)" }}
         >
-          {activeTab ? (
-            byId[activeTab]?.content
+          {secondary === null ? (
+            <div className="h-full overflow-auto">{paneContent(activeTab)}</div>
           ) : (
-            <div className="flex h-full items-center justify-center p-6 text-center font-mono text-xs text-foreground/30">
-              Select something to get started.
+            // Split view: side by side on desktop, stacked on mobile; each
+            // pane scrolls independently. The primary follows the nav; the
+            // secondary has its own module picker.
+            <div className="flex h-full flex-col sm:flex-row">
+              <div
+                key={`primary-${activeTab}`}
+                className="min-h-0 min-w-0 flex-1 basis-0 overflow-auto border-b border-accent-dim sm:border-b-0 sm:border-r"
+              >
+                {paneContent(activeTab)}
+              </div>
+              <div
+                key={`secondary-${secondary}`}
+                className="flex min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden"
+              >
+                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-accent-dim bg-black px-2 py-1">
+                  <select
+                    value={secondary}
+                    onChange={(e) => setSecondary(e.target.value)}
+                    aria-label="Second pane module"
+                    className="rounded border border-accent-dim bg-black px-1.5 py-0.5 font-mono text-xs text-accent-bright outline-none focus:border-accent"
+                  >
+                    {items.map((i) => (
+                      <option key={i.id} value={i.id}>
+                        {i.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => setSecondary(null)}
+                    aria-label="Close second pane"
+                    className="rounded px-1.5 text-foreground/50 hover:text-accent-bright"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="min-h-0 flex-1 overflow-auto">
+                  {paneContent(secondary)}
+                </div>
+              </div>
             </div>
           )}
         </main>

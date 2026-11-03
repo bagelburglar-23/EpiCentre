@@ -127,6 +127,7 @@ const C = ({ children }: { children: ReactNode }) => (
 // --- Patch trail: newest first. Descriptions of pre-#15 PRs are
 // reconstructed from the repo; the recent ones are precise. ---
 const PATCHES: { pr: number; name: string; body: ReactNode }[] = [
+  { pr: 34, name: "Split-screen", body: "Use two modules at once: the ⊟ toggle (sidebar on desktop, title bar on mobile) opens a second pane — side by side on desktop, stacked on mobile — each scrolling on its own, with its own module picker. The sidebar/bottom-nav still drives the main pane; ✕ closes the second." },
   { pr: 33, name: "OCR input sources", body: "Desktop scans from the clipboard — paste a copied receipt image or press Cmd/Ctrl+V, no file dialog. Mobile's picker now offers both the photo gallery and the camera (removed the camera-only lock)." },
   { pr: 32, name: "EpiSplit receipt OCR", body: "Scan a receipt photo to add items: tesseract.js reads it entirely in the browser (no AI tokens, no server), a heuristic parser pulls name+price lines, and you review/untick/edit them before they're added. First scan downloads the English model (~a couple MB), cached after." },
   { pr: 31, name: "Lock zoom + stop review requests", body: "Disable pinch-zoom on mobile so the app stays put like a native shell (pairs with the #29 viewport lock); drop the automatic PR review-request step — no more GitHub review pings, just open the PR and hit merge." },
