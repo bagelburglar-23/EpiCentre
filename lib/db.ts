@@ -138,6 +138,22 @@ export function getDb(): Database.Database {
   } catch (e) {
     if (!(e instanceof Error) || !e.message.includes("duplicate column")) throw e;
   }
+  // Bills (EpiSplit): one row per outing. The whole bill - participants,
+  // items, per-item per-person shares, tax rates - is a JSON document in
+  // `data`, edited and recomputed as a unit (see lib/bill-calc.ts). A
+  // document blob fits this far better than 4 relational tables at
+  // personal-bill scale. is_test follows the shared-DB convention.
+  instance.exec(`
+    CREATE TABLE IF NOT EXISTS bills (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      data TEXT NOT NULL DEFAULT '{"participants":[],"items":[]}',
+      is_test INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
   // App login password, moved off the APP_PASSWORD env var so it can be
   // changed from inside the app (see lib/account.ts) - no SSH/VPS access
   // needed, works from any logged-in device including Phone. Single row
