@@ -50,15 +50,19 @@ export function renameList(id: number, name: string): void {
     .run(n, id);
 }
 
-// Deleting a list sends its items back to the Inbox (list_id = NULL) rather
-// than deleting them - safer, and the user can re-file them. Done in one
-// transaction so items are never briefly orphaned to a missing list.
-export function deleteList(id: number): void {
+// Deleting a list either moves its items to the Dump (list_id = NULL) or
+// deletes them along with the list - the caller chooses. One transaction so
+// items are never briefly orphaned to a missing list.
+export function deleteList(id: number, deleteItems: boolean): void {
   const db = getDb();
   db.transaction((listId: number) => {
-    db.prepare(
-      `UPDATE todos SET list_id = NULL, updated_at = datetime('now') WHERE list_id = ?`
-    ).run(listId);
+    if (deleteItems) {
+      db.prepare(`DELETE FROM todos WHERE list_id = ?`).run(listId);
+    } else {
+      db.prepare(
+        `UPDATE todos SET list_id = NULL, updated_at = datetime('now') WHERE list_id = ?`
+      ).run(listId);
+    }
     db.prepare(`DELETE FROM lists WHERE id = ?`).run(listId);
   })(id);
 }

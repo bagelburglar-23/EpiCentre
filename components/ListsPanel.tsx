@@ -132,7 +132,7 @@ function EntryModal({
                 setListId(e.target.value === "" ? null : Number(e.target.value))
               }
             >
-              <option value="">Inbox</option>
+              <option value="">Dump</option>
               {lists.map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.name}
@@ -213,6 +213,8 @@ export default function ListsPanel({
   const [newListTest, setNewListTest] = useState(false);
   const [renamingId, setRenamingId] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [railOpen, setRailOpen] = useState(true);
+  const [deletingList, setDeletingList] = useState<number | null>(null);
   const [, startTransition] = useTransition();
 
   const visibleIds = new Set(lists.map((l) => l.id));
@@ -311,18 +313,17 @@ export default function ListsPanel({
     });
   }
 
-  function removeList(id: number) {
-    const list = lists.find((l) => l.id === id);
-    const n = openCount(id);
-    const msg =
-      n > 0
-        ? `Delete "${list?.name}"? Its ${n} open item(s) move to the Inbox.`
-        : `Delete "${list?.name}"?`;
-    if (!confirm(msg)) return;
+  function doDeleteList(id: number, deleteItems: boolean) {
+    setDeletingList(null);
     if (selected === id) setSelected(null);
     setLists((prev) => prev.filter((l) => l.id !== id));
+    setTodos((prev) =>
+      deleteItems
+        ? prev.filter((t) => t.listId !== id)
+        : prev.map((t) => (t.listId === id ? { ...t, listId: null } : t))
+    );
     startTransition(async () => {
-      await deleteListAction(id);
+      await deleteListAction(id, deleteItems);
     });
   }
 
@@ -348,19 +349,33 @@ export default function ListsPanel({
 
   const items = itemsFor(selected);
   const currentName =
-    selected === null ? "Inbox" : lists.find((l) => l.id === selected)?.name ?? "Inbox";
+    selected === null ? "Dump" : lists.find((l) => l.id === selected)?.name ?? "Dump";
+  const deletingObj =
+    deletingList != null ? lists.find((l) => l.id === deletingList) : null;
+  const deletingCount = deletingList != null ? itemsFor(deletingList).length : 0;
 
   return (
     <div className="flex h-full">
       {/* List rail */}
+      {railOpen ? (
       <aside className="flex w-40 shrink-0 flex-col gap-1 border-r border-accent-dim bg-black p-2">
         <div className="mb-1 flex items-center justify-between px-1">
           <h1 className="font-mono text-sm uppercase tracking-wide text-accent-bright">
             Lists
           </h1>
-          <HelpButton section="guide-lists" />
+          <div className="flex items-center gap-1">
+            <HelpButton section="guide-lists" />
+            <button
+              onClick={() => setRailOpen(false)}
+              aria-label="Collapse lists"
+              title="Collapse"
+              className="rounded px-1 text-foreground/40 hover:text-accent-bright"
+            >
+              ‹
+            </button>
+          </div>
         </div>
-        {railItem(null, "Inbox")}
+        {railItem(null, "Dump")}
         {lists.map((l) =>
           renamingId === l.id ? (
             <input
@@ -390,7 +405,7 @@ export default function ListsPanel({
                   ✎
                 </button>
                 <button
-                  onClick={() => removeList(l.id)}
+                  onClick={() => setDeletingList(l.id)}
                   aria-label={`Delete ${l.name}`}
                   className="rounded px-1 text-foreground/40 hover:text-accent-bright"
                 >
@@ -422,6 +437,18 @@ export default function ListsPanel({
           </button>
         )}
       </aside>
+      ) : (
+        <aside className="flex w-8 shrink-0 flex-col items-center border-r border-accent-dim bg-black py-2">
+          <button
+            onClick={() => setRailOpen(true)}
+            aria-label="Expand lists"
+            title="Lists"
+            className="rounded px-1 font-mono text-sm text-foreground/50 hover:text-accent-bright"
+          >
+            ›
+          </button>
+        </aside>
+      )}
 
       {/* Items of the selected list */}
       <div className="flex flex-1 flex-col p-4">
@@ -530,6 +557,61 @@ export default function ListsPanel({
           onClose={() => setModal(null)}
           onSubmit={(f) => saveItem(modal.id, f)}
         />
+      )}
+
+      {deletingList != null && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 pt-24"
+          onClick={() => setDeletingList(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded border border-accent-dim bg-black p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="mb-2 font-mono text-xs uppercase tracking-wide text-accent-bright">
+              Delete list “{deletingObj?.name}”
+            </h2>
+            <p className="mb-4 text-sm text-foreground/70">
+              {deletingCount > 0
+                ? `It has ${deletingCount} item${deletingCount === 1 ? "" : "s"}. What should happen to them?`
+                : "This list is empty."}
+            </p>
+            <div className="flex flex-col gap-2">
+              {deletingCount > 0 ? (
+                <>
+                  <button
+                    onClick={() => doDeleteList(deletingList, false)}
+                    className="rounded border border-accent-dim px-3 py-2 text-left text-sm text-foreground hover:bg-accent-dim"
+                  >
+                    Move items to{" "}
+                    <span className="text-accent-bright">Dump</span>, delete the
+                    list
+                  </button>
+                  <button
+                    onClick={() => doDeleteList(deletingList, true)}
+                    className="rounded border border-accent-dim px-3 py-2 text-left text-sm text-foreground hover:bg-accent-dim"
+                  >
+                    Delete the list{" "}
+                    <span className="text-accent-bright">and its items</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => doDeleteList(deletingList, true)}
+                  className="rounded border border-accent-dim px-3 py-2 text-left text-sm text-foreground hover:bg-accent-dim"
+                >
+                  Delete the list
+                </button>
+              )}
+              <button
+                onClick={() => setDeletingList(null)}
+                className="mt-1 rounded px-3 py-1.5 text-center font-mono text-xs text-foreground/60 hover:text-foreground"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
