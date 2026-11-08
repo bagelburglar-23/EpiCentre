@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import ViewportDebug from "@/components/ViewportDebug"; // TEMP: remove after nav-gap fix
 
 export type NavItem = {
   id: string;
@@ -164,23 +163,13 @@ export default function Shell({ items }: { items: NavItem[] }) {
 
   // Pin the app to the viewport like a native shell: the page itself never
   // scrolls or rubber-bands, only the inner <main> (and other explicit scroll
-  // areas) do. `fixed inset-0` forces the shell to span the full viewport top
-  // to bottom; with viewport-fit=cover active that viewport IS the whole
-  // screen, so the in-flow bottom nav lands flush on the real bottom (no fixed-
-  // positioning tricks - those misbehave inside a fixed+overflow:hidden shell
-  // in iOS WebKit). The left/right padding clears the safe area so content
-  // doesn't tuck under the rounded corners / notch now that cover is on. The
+  // areas) do. `fixed inset-0` makes the shell span the whole web view. With
+  // no viewport-fit=cover (see app/layout.tsx), iOS insets that web view inside
+  // the safe area, so the in-flow bottom nav lands flush just above the home
+  // indicator on its own - no fixed-positioning tricks, no edge clipping. The
   // column flips to a row on sm+.
   return (
-    <div
-      data-debug-shell
-      className="fixed inset-0 flex w-full flex-col overflow-hidden overscroll-none sm:flex-row"
-      style={{
-        paddingLeft: "env(safe-area-inset-left)",
-        paddingRight: "env(safe-area-inset-right)",
-      }}
-    >
-      <ViewportDebug />{/* TEMP: remove after nav-gap fix */}
+    <div className="fixed inset-0 flex w-full flex-col overflow-hidden overscroll-none sm:flex-row">
       {/* Desktop sidebar - replaced by the bottom nav on mobile. Pinned items
           (Settings) sit at the bottom, as most apps place settings. */}
       <nav className="hidden w-11 flex-col items-center gap-1 border-r border-accent-dim bg-black py-2 sm:flex">
@@ -359,7 +348,6 @@ export default function Shell({ items }: { items: NavItem[] }) {
             the full-height column, so it sits flush on the real screen bottom
             (with cover active); the padding clears the iOS home indicator. */}
         <nav
-          data-debug-nav
           className="flex items-stretch border-t border-accent-dim bg-black sm:hidden"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
