@@ -1,13 +1,15 @@
 [Unit]
-Description=Run send-reminders three times a day
+Description=Tick send-reminders every 5 min (the schedule lives in the DB)
 
 [Timer]
-# 08:30, 16:00, 22:00 HKT (= 00:30, 08:00, 14:00 UTC): a morning nudge, the
-# 16:00 gap Lucas actually sees (between Tokyo equities and evening
-# derivatives), and a night wind-down. Each fire sends a per-list digest.
-OnCalendar=*-*-* 00:30:00
-OnCalendar=*-*-* 08:00:00
-OnCalendar=*-*-* 14:00:00
+# A dumb 5-minute ticker. The actual reminder times are rows in the
+# reminder_slots table, editable from Settings - Reminders; the script decides
+# on each tick whether any slot has come due (and fires it once per day). This
+# used to be three hard-coded OnCalendar lines; moving the schedule into the DB
+# is what made the times editable from the app.
+OnCalendar=*:0/5
+# Catch up one missed run if the box was asleep; the slot's 30-min window plus
+# last_sent idempotency stop a catch-up from double-sending.
 Persistent=true
 
 [Install]

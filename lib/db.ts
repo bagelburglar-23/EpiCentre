@@ -162,6 +162,28 @@ export function getDb(): Database.Database {
     )
   `);
 
+  // Reminder slots: the times (HKT) the Telegram digest fires. Editable from
+  // Settings; the timer is now a dumb 5-min ticker and send-due-reminders.mjs
+  // decides whether a slot is due. last_sent (HKT date) stops a slot firing
+  // twice in a day. Seeded once with the previous hard-coded trio.
+  instance.exec(`
+    CREATE TABLE IF NOT EXISTS reminder_slots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      time TEXT NOT NULL,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      last_sent TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  const slotCount = instance
+    .prepare(`SELECT COUNT(*) AS c FROM reminder_slots`)
+    .get() as { c: number };
+  if (slotCount.c === 0) {
+    const seed = instance.prepare(`INSERT INTO reminder_slots (time) VALUES (?)`);
+    for (const t of ["08:30", "16:00", "22:00"]) seed.run(t);
+  }
+
   // App login password, moved off the APP_PASSWORD env var so it can be
   // changed from inside the app (see lib/account.ts) - no SSH/VPS access
   // needed, works from any logged-in device including Phone. Single row
