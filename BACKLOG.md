@@ -61,7 +61,7 @@ Not before Phase B, one at a time.
 - [2026-10-27] Per-calendar show/hide toggles + per-calendar colors (now that 22 calendars sync in)
 - [2026-10-27] In-app search across events
 - [2026-10-27] Year view
-- [2026-10-27] Time-zone handling beyond UTC-everywhere
+- [2026-10-27] Time-zone handling beyond UTC-everywhere (partly done 2026-11-08: the Google write now labels times Asia/Singapore so GCal no longer drifts +8h; storage is still floating wall-clock — fine while single-zone, revisit only if travelling across zones matters)
 
 ## New
 

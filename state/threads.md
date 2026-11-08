@@ -11,25 +11,19 @@ a task list can't represent.
 
 **Updated:** 2026-11-08 · **By:** Remote Control session
 
-- **State:** prod + UAT healthy. #18–43 all merged (Lists, Cal+ two-way,
-  EpiSplit + receipt OCR + grid/range-select, split-screen, mobile overhaul,
-  SideRail/Modal/prefs shared, Settings build-out, Telegram digest, senior-dev
-  sweep, editable reminder control board). Nightly encrypted backups still live.
-- **In flight:** `feature/mobile-ui-polish` (#44) — three mobile fixes from
-  real use: (1) the left rail opens as a **full-screen takeover menu** on
-  phones (☰ launcher + Close; picking an entry auto-closes it via a
-  `data-rail-close` delegated click), not the old cramped half-width rail —
-  desktop unchanged; (2) shell switched to **`h-[100dvh]`** so the bottom nav
-  sits flush to the screen bottom (was floating above a gap); (3) the receipt
-  button is unified to one **"Upload receipt ▾"** popover — mobile: Take
-  photo / Upload photo / Choose file / Paste; desktop: Choose file / Paste
-  (device detected via UA + `maxTouchPoints` so iPads count as mobile). Build +
-  lint green.
-- **On merge / to verify on the iPhone PWA:** #44 is mobile-visual — confirm on
-  device: the ☰ full-screen menu, the bottom nav now flush (the empty-space
-  complaint), and the Upload-receipt menu showing 4 options in both portrait &
-  landscape. The 100dvh change is the one I couldn't reproduce in the sandbox
-  (no iOS); if the gap persists it's a deeper standalone-PWA quirk to iterate.
+- **State:** prod + UAT healthy. #18–44 merged (through the mobile UI polish —
+  full-screen rail menu, 100dvh nav, unified Upload-receipt menu). Nightly
+  encrypted backups still live.
+- **In flight:** `feature/epical-sgt` (#45, rebased onto main after #44) —
+  **EpiCal timezone fix.** EpiCal was labelling event times UTC when writing to
+  Google, so entries drifted +8h in GCal (15:00 → 23:00 SGT). Now labels them
+  `Asia/Singapore` (one line, `lib/google-calendar.ts:toGoogleTime`).
+  Display/edit were already correct (floating wall-clock, string-sliced).
+  Events pushed *before* this fix stay shifted until re-saved. Build + lint
+  green.
+- **Still open from real use (next round, after #45):** (a) bottom-nav gap —
+  #44's `100dvh` may not have fully fixed it on device; revisit. (b) EpiSplit
+  "Upload receipt" button polish. (c) general mobile polish pass.
 - **Next:** (1) restore test on the PC — prove the age key decrypts a backup;
   (2) loosen deny rules so Claude can read service status/logs; optional
   Termius phone break-glass (PC SSH already works); (3) **needs Lucas's

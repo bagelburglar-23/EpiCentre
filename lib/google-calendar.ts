@@ -102,10 +102,23 @@ async function getAccessToken(): Promise<string> {
   return data.access_token;
 }
 
+// EpiCal stores every datetime as a zone-less wall-clock string
+// "YYYY-MM-DDTHH:MM:SS" (see CalPlusPanel's timeLabel) - the hours you type are
+// the hours you mean, in your local zone. Singapore (UTC+8, no DST) is that
+// zone. When handing a time to Google we must name that zone, NOT "UTC":
+// Google reads a zone-less dateTime together with `timeZone`, so labelling a
+// 15:00 wall-clock as "UTC" made Google store it as 15:00Z = 23:00 SGT (the
+// +8h drift). Naming Asia/Singapore makes Google store 15:00 as 15:00 SGT.
+// Reads stay correct because display slices the clock digits out of the string
+// and ignores whatever offset Google returns.
+const APP_TIME_ZONE = "Asia/Singapore";
+
 type EventTimeField = { date: string } | { dateTime: string; timeZone: string };
 
 function toGoogleTime(iso: string, allDay: boolean): EventTimeField {
-  return allDay ? { date: iso.slice(0, 10) } : { dateTime: iso, timeZone: "UTC" };
+  return allDay
+    ? { date: iso.slice(0, 10) }
+    : { dateTime: iso, timeZone: APP_TIME_ZONE };
 }
 
 function fromGoogleTime(field: { date?: string; dateTime?: string }): {
