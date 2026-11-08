@@ -24,11 +24,17 @@ export default function ViewportDebug() {
         typeof navigator !== "undefined" &&
         (("standalone" in navigator && (navigator as unknown as { standalone?: boolean }).standalone) ||
           window.matchMedia("(display-mode: standalone)").matches);
+      // Where does the mobile bottom nav actually sit? (it has class "fixed")
+      const nav = document.querySelector("nav.fixed") as HTMLElement | null;
+      const r = nav?.getBoundingClientRect();
+      const navStr = r
+        ? `navTop ${Math.round(r.top)} navBot ${Math.round(r.bottom)} navH ${Math.round(r.height)}`
+        : "nav ?";
       setInfo(
         [
           `inner ${window.innerHeight}`,
-          `visVP ${Math.round(window.visualViewport?.height ?? 0)}`,
-          `client ${document.documentElement.clientHeight}`,
+          `screen ${screen.width}x${screen.height}`,
+          navStr,
           `dvh ${probe("100dvh")}`,
           `svh ${probe("100svh")}`,
           `lvh ${probe("100lvh")}`,
