@@ -21,9 +21,14 @@ a task list can't represent.
   Display/edit were already correct (floating wall-clock, string-sliced).
   Events pushed *before* this fix stay shifted until re-saved. Build + lint
   green.
-- **Still open from real use (next round, after #45):** (a) bottom-nav gap —
-  #44's `100dvh` may not have fully fixed it on device; revisit. (b) EpiSplit
-  "Upload receipt" button polish. (c) general mobile polish pass.
+- **Also in flight:** `feature/nav-gap-fix` (#46, stacked on #45) — the
+  bottom-nav gap persisted on-device even with #44's `100dvh`, so the nav is
+  now `fixed inset-x-0 bottom-0` (viewport-pinned; a fixed ancestor isn't a
+  containing block for a fixed child, so it ignores the shell's mis-measured
+  height) with `<main>` padded to match. **Merge order: #45 then #46**
+  (stacked, so no conflict). Build + lint green; needs iPhone PWA confirmation.
+- **EpiSplit "Upload receipt" button:** confirmed fixed on device (was just the
+  pre-#44 branch). No action.
 - **Next:** (1) restore test on the PC — prove the age key decrypts a backup;
   (2) loosen deny rules so Claude can read service status/logs; optional
   Termius phone break-glass (PC SSH already works); (3) **needs Lucas's
