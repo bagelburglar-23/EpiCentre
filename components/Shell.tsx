@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import ViewportDebug from "@/components/ViewportDebug"; // TEMP: remove after nav-gap fix
 
 export type NavItem = {
   id: string;
@@ -172,12 +173,14 @@ export default function Shell({ items }: { items: NavItem[] }) {
   // column flips to a row on sm+.
   return (
     <div
+      data-debug-shell
       className="fixed inset-0 flex w-full flex-col overflow-hidden overscroll-none sm:flex-row"
       style={{
         paddingLeft: "env(safe-area-inset-left)",
         paddingRight: "env(safe-area-inset-right)",
       }}
     >
+      <ViewportDebug />{/* TEMP: remove after nav-gap fix */}
       {/* Desktop sidebar - replaced by the bottom nav on mobile. Pinned items
           (Settings) sit at the bottom, as most apps place settings. */}
       <nav className="hidden w-11 flex-col items-center gap-1 border-r border-accent-dim bg-black py-2 sm:flex">
@@ -356,6 +359,7 @@ export default function Shell({ items }: { items: NavItem[] }) {
             the full-height column, so it sits flush on the real screen bottom
             (with cover active); the padding clears the iOS home indicator. */}
         <nav
+          data-debug-nav
           className="flex items-stretch border-t border-accent-dim bg-black sm:hidden"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
