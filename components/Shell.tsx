@@ -349,7 +349,11 @@ export default function Shell({ items }: { items: NavItem[] }) {
             (with cover active); the padding clears the iOS home indicator. */}
         <nav
           className="flex items-stretch border-t border-accent-dim bg-black sm:hidden"
-          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+          // Small clearance below the labels so the iOS home-indicator gesture
+          // line doesn't sit over them (Grab-style). Without viewport-fit=cover,
+          // env(safe-area-inset-bottom) reads 0, so max() floors it at 1.5rem;
+          // if cover is ever enabled, the real (larger) inset wins instead.
+          style={{ paddingBottom: "max(env(safe-area-inset-bottom), 1.5rem)" }}
         >
           <div className="flex flex-1 items-stretch gap-1 overflow-x-auto overscroll-x-none px-1">
             {scrollItems.map((item) => (
