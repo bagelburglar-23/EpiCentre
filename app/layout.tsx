@@ -40,7 +40,13 @@ export const metadata: Metadata = {
   description: "Personal ledger and hub",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    // Opaque black status bar (white text) sitting ABOVE the web view, rather
+    // than black-translucent (which draws the app under the status bar and
+    // needs viewport-fit=cover). Paired with dropping cover below, this is the
+    // "let iOS inset the web view" approach: the app fills the safe area, the
+    // bottom nav lands flush above the home indicator on its own, and there's
+    // no edge-to-edge clipping - same model the reference app uses.
+    statusBarStyle: "black",
     title: appName,
   },
   icons: {
@@ -50,16 +56,17 @@ export const metadata: Metadata = {
   },
 };
 
-// Mobile viewport: fill the screen edge-to-edge (viewport-fit=cover lets the
-// bottom nav's safe-area padding reach under the iOS home indicator), colour
-// the status-bar area dark, and lock zoom so the app can't be pinched/zoomed
-// out of place (it behaves like a native app, not a web page).
+// Mobile viewport: NO viewport-fit=cover. iOS lays the web view inside the safe
+// area (below the status bar, above the home indicator), so the bottom nav sits
+// flush above the gesture line by itself and there's no edge clipping - the
+// approach the reference barber app uses. Zoom is locked so it behaves like a
+// native app, not a web page. (Changing viewport-fit only takes effect on a
+// fresh Add-to-Home-Screen - iOS caches it at install time.)
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  viewportFit: "cover",
   themeColor: "#000000",
 };
 

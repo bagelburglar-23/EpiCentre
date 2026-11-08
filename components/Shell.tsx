@@ -163,15 +163,13 @@ export default function Shell({ items }: { items: NavItem[] }) {
 
   // Pin the app to the viewport like a native shell: the page itself never
   // scrolls or rubber-bands, only the inner <main> (and other explicit scroll
-  // areas) do. Fixed + top-anchored, with the height set to 100dvh (dynamic
-  // viewport height) rather than inset-0's bottom:0 - dvh tracks the *live*
-  // viewport, so when a mobile browser's toolbar collapses the bottom nav
-  // follows the real screen bottom instead of leaving a gap above it (the
-  // classic iOS "100vh" bar-floating bug). In an installed PWA, where there's
-  // no collapsing toolbar, dvh equals the full screen - same as before. The
+  // areas) do. `fixed inset-0` makes the shell span the whole web view. With
+  // no viewport-fit=cover (see app/layout.tsx), iOS insets that web view inside
+  // the safe area, so the in-flow bottom nav lands flush just above the home
+  // indicator on its own - no fixed-positioning tricks, no edge clipping. The
   // column flips to a row on sm+.
   return (
-    <div className="fixed inset-x-0 top-0 flex h-[100dvh] w-full flex-col overflow-hidden overscroll-none sm:flex-row">
+    <div className="fixed inset-0 flex w-full flex-col overflow-hidden overscroll-none sm:flex-row">
       {/* Desktop sidebar - replaced by the bottom nav on mobile. Pinned items
           (Settings) sit at the bottom, as most apps place settings. */}
       <nav className="hidden w-11 flex-col items-center gap-1 border-r border-accent-dim bg-black py-2 sm:flex">
@@ -346,11 +344,16 @@ export default function Shell({ items }: { items: NavItem[] }) {
         </main>
 
         {/* Mobile bottom nav - the EpiX modules scroll; the pinned utility
-            (Settings, ☰) stays fixed at the right. padding clears the iOS
-            home indicator. */}
+            (Settings, ☰) stays fixed at the right. In normal flow at the end of
+            the full-height column, so it sits flush on the real screen bottom
+            (with cover active); the padding clears the iOS home indicator. */}
         <nav
           className="flex items-stretch border-t border-accent-dim bg-black sm:hidden"
-          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+          // Small clearance below the labels so the iOS home-indicator gesture
+          // line doesn't sit over them (Grab-style). Without viewport-fit=cover,
+          // env(safe-area-inset-bottom) reads 0, so max() floors it at 1.5rem;
+          // if cover is ever enabled, the real (larger) inset wins instead.
+          style={{ paddingBottom: "max(env(safe-area-inset-bottom), 1.5rem)" }}
         >
           <div className="flex flex-1 items-stretch gap-1 overflow-x-auto overscroll-x-none px-1">
             {scrollItems.map((item) => (

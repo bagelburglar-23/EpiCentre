@@ -21,9 +21,23 @@ a task list can't represent.
   Display/edit were already correct (floating wall-clock, string-sliced).
   Events pushed *before* this fix stay shifted until re-saved. Build + lint
   green.
-- **Still open from real use (next round, after #45):** (a) bottom-nav gap —
-  #44's `100dvh` may not have fully fixed it on device; revisit. (b) EpiSplit
-  "Upload receipt" button polish. (c) general mobile polish pass.
+- **Also in flight:** `feature/nav-gap-fix` (#46, stacked on #45) — the
+  bottom-nav gap. **Root cause (diagnosed with a temporary on-screen readout,
+  since removed): `env(safe-area-inset-bottom)` = 0 on a home-indicator device
+  → `viewport-fit=cover` was NOT active in the installed PWA.** The app has
+  requested cover since #22, but iOS only reads viewport/status-bar config at
+  *Add to Home Screen*; the installed copy predated cover and cached old config.
+  **Final approach (after several cover-based attempts kept the nav floating):
+  DROPPED viewport-fit=cover entirely** — same as the reference barber app
+  (august.eber.co, plain `width=device-width,initial-scale=1` viewport). iOS
+  then insets the web view inside the safe area, so the in-flow bottom nav lands
+  flush above the home indicator with no safe-area math and no edge clipping.
+  Status bar: `black-translucent` → opaque `black`. **Needs ONE reinstall**
+  (iOS caches viewport-fit at Add-to-Home-Screen). ViewportDebug removed.
+  **Merge order: #45 then #46** (stacked, no conflict). Build + lint green;
+  awaiting on-device confirm.
+- **EpiSplit "Upload receipt" button:** confirmed fixed on device (was just the
+  pre-#44 branch). No action.
 - **Next:** (1) restore test on the PC — prove the age key decrypts a backup;
   (2) loosen deny rules so Claude can read service status/logs; optional
   Termius phone break-glass (PC SSH already works); (3) **needs Lucas's
