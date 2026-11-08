@@ -100,11 +100,14 @@ type DisplayEvent = {
 
 // event.start is stored as a plain "YYYY-MM-DDTHH:MM:SS" string with no
 // timezone suffix (see EventModal below - it's built directly from
-// <input type="date">/<input type="time"> values, no zone conversion
-// anywhere in this app yet - see BACKLOG.md). Slicing it is deliberate,
-// not a shortcut: `new Date(e.start)` would have the browser interpret the
-// zone-less string as LOCAL time, which could silently shift the displayed
-// hour depending on the viewer's device.
+// <input type="date">/<input type="time"> values). The app treats these as
+// "floating" wall-clock times: the only place a zone is named is the Google
+// boundary (lib/google-calendar.ts labels them Asia/Singapore), never in
+// storage or display - see BACKLOG.md on going fully zone-aware. Slicing is
+// deliberate, not a shortcut: `new Date(e.start)` would have the browser read
+// the zone-less string as LOCAL time, which could silently shift the displayed
+// hour depending on the viewer's device (and a Google-sourced value carries a
+// +08:00 suffix the slice correctly ignores).
 function timeLabel(e: DisplayEvent): string {
   return e.allDay ? "All day" : e.start.slice(11, 16);
 }
