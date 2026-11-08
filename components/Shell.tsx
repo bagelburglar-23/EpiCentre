@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import ViewportDebug from "@/components/ViewportDebug"; // TEMP: remove after nav-gap fix
 
 export type NavItem = {
   id: string;
@@ -173,7 +172,6 @@ export default function Shell({ items }: { items: NavItem[] }) {
   // column flips to a row on sm+.
   return (
     <div className="fixed inset-x-0 top-0 flex h-[100dvh] w-full flex-col overflow-hidden overscroll-none sm:flex-row">
-      <ViewportDebug />{/* TEMP: remove after nav-gap fix */}
       {/* Desktop sidebar - replaced by the bottom nav on mobile. Pinned items
           (Settings) sit at the bottom, as most apps place settings. */}
       <nav className="hidden w-11 flex-col items-center gap-1 border-r border-accent-dim bg-black py-2 sm:flex">

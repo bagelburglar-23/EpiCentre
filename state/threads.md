@@ -22,11 +22,15 @@ a task list can't represent.
   Events pushed *before* this fix stay shifted until re-saved. Build + lint
   green.
 - **Also in flight:** `feature/nav-gap-fix` (#46, stacked on #45) — the
-  bottom-nav gap persisted on-device even with #44's `100dvh`, so the nav is
-  now `fixed inset-x-0 bottom-0` (viewport-pinned; a fixed ancestor isn't a
-  containing block for a fixed child, so it ignores the shell's mis-measured
-  height) with `<main>` padded to match. **Merge order: #45 then #46**
-  (stacked, so no conflict). Build + lint green; needs iPhone PWA confirmation.
+  bottom-nav gap. **Root cause (diagnosed with a temporary on-screen readout,
+  since removed): `env(safe-area-inset-bottom)` = 0 on a home-indicator device
+  → `viewport-fit=cover` was NOT active in the installed PWA.** The app has
+  requested cover since #22, but iOS only reads viewport/status-bar config at
+  *Add to Home Screen*; the installed copy predated cover and cached old config.
+  **Fix: re-add EpiCentre to the home screen** (Lucas doing this). #46 also
+  hardens the layout (nav `fixed inset-x-0 bottom-0` + `<main>` padding) so it's
+  right the moment cover engages. **Merge order: #45 then #46** (stacked, no
+  conflict). Build + lint green.
 - **EpiSplit "Upload receipt" button:** confirmed fixed on device (was just the
   pre-#44 branch). No action.
 - **Next:** (1) restore test on the PC — prove the age key decrypts a backup;
