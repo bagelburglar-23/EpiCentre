@@ -163,15 +163,21 @@ export default function Shell({ items }: { items: NavItem[] }) {
 
   // Pin the app to the viewport like a native shell: the page itself never
   // scrolls or rubber-bands, only the inner <main> (and other explicit scroll
-  // areas) do. Fixed + top-anchored, with the height set to 100dvh (dynamic
-  // viewport height) rather than inset-0's bottom:0 - dvh tracks the *live*
-  // viewport, so when a mobile browser's toolbar collapses the bottom nav
-  // follows the real screen bottom instead of leaving a gap above it (the
-  // classic iOS "100vh" bar-floating bug). In an installed PWA, where there's
-  // no collapsing toolbar, dvh equals the full screen - same as before. The
+  // areas) do. `fixed inset-0` forces the shell to span the full viewport top
+  // to bottom; with viewport-fit=cover active that viewport IS the whole
+  // screen, so the in-flow bottom nav lands flush on the real bottom (no fixed-
+  // positioning tricks - those misbehave inside a fixed+overflow:hidden shell
+  // in iOS WebKit). The left/right padding clears the safe area so content
+  // doesn't tuck under the rounded corners / notch now that cover is on. The
   // column flips to a row on sm+.
   return (
-    <div className="fixed inset-x-0 top-0 flex h-[100dvh] w-full flex-col overflow-hidden overscroll-none sm:flex-row">
+    <div
+      className="fixed inset-0 flex w-full flex-col overflow-hidden overscroll-none sm:flex-row"
+      style={{
+        paddingLeft: "env(safe-area-inset-left)",
+        paddingRight: "env(safe-area-inset-right)",
+      }}
+    >
       {/* Desktop sidebar - replaced by the bottom nav on mobile. Pinned items
           (Settings) sit at the bottom, as most apps place settings. */}
       <nav className="hidden w-11 flex-col items-center gap-1 border-r border-accent-dim bg-black py-2 sm:flex">
@@ -294,11 +300,9 @@ export default function Shell({ items }: { items: NavItem[] }) {
         )}
 
         <main
-          className="min-h-0 flex-1 overflow-hidden bg-background pb-[calc(4rem_+_env(safe-area-inset-bottom))] sm:pb-0"
+          className="min-h-0 flex-1 overflow-hidden bg-background"
           // When the mobile title bar is hidden (Settings / empty state),
           // <main> clears the status bar itself. 0 on desktop (inset is 0).
-          // The bottom padding (mobile only) reserves room for the now-fixed
-          // bottom nav so the last row of content can scroll clear of it.
           style={{ paddingTop: showTitleBar ? undefined : "env(safe-area-inset-top)" }}
         >
           {secondary === null ? (
@@ -348,16 +352,11 @@ export default function Shell({ items }: { items: NavItem[] }) {
         </main>
 
         {/* Mobile bottom nav - the EpiX modules scroll; the pinned utility
-            (Settings, ☰) stays fixed at the right. padding clears the iOS
-            home indicator.
-            `fixed inset-x-0 bottom-0` glues it to the real viewport bottom.
-            A position:fixed ancestor (the shell) does NOT form a containing
-            block for a fixed child, so this resolves against the viewport, not
-            the shell's height - which is why it sits flush even where the
-            shell's own 100dvh measured short and left the old gap. <main> is
-            padded by this nav's height so nothing hides behind it. */}
+            (Settings, ☰) stays fixed at the right. In normal flow at the end of
+            the full-height column, so it sits flush on the real screen bottom
+            (with cover active); the padding clears the iOS home indicator. */}
         <nav
-          className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-accent-dim bg-black sm:hidden"
+          className="flex items-stretch border-t border-accent-dim bg-black sm:hidden"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
           <div className="flex flex-1 items-stretch gap-1 overflow-x-auto overscroll-x-none px-1">

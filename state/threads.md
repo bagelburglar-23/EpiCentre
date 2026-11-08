@@ -27,10 +27,14 @@ a task list can't represent.
   → `viewport-fit=cover` was NOT active in the installed PWA.** The app has
   requested cover since #22, but iOS only reads viewport/status-bar config at
   *Add to Home Screen*; the installed copy predated cover and cached old config.
-  **Fix: re-add EpiCentre to the home screen** (Lucas doing this). #46 also
-  hardens the layout (nav `fixed inset-x-0 bottom-0` + `<main>` padding) so it's
-  right the moment cover engages. **Merge order: #45 then #46** (stacked, no
-  conflict). Build + lint green.
+  **Fix part 1: re-add EpiCentre to the home screen** (done — cover engaged,
+  saBot ~34, content now edge-to-edge). **Fix part 2:** after reinstall the nav
+  STILL floated — a `position:fixed` nav misbehaves inside the
+  `fixed + overflow:hidden` shell in iOS WebKit. So reverted the nav to
+  **normal flow** at the bottom of a `fixed inset-0` full-height column (flush
+  now that cover is on) + added **left/right safe-area padding** for the
+  edge-clip cover introduced. **Merge order: #45 then #46** (stacked, no
+  conflict). Build + lint green; awaiting on-device confirm.
 - **EpiSplit "Upload receipt" button:** confirmed fixed on device (was just the
   pre-#44 branch). No action.
 - **Next:** (1) restore test on the PC — prove the age key decrypts a backup;
