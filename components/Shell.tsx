@@ -161,11 +161,17 @@ export default function Shell({ items }: { items: NavItem[] }) {
     );
   };
 
-  // fixed inset-0 pins the whole app to the viewport like a native shell: the
-  // page itself never scrolls or rubber-bands, only the inner <main> (and
-  // other explicit scroll areas) do. The column flips to a row on sm+.
+  // Pin the app to the viewport like a native shell: the page itself never
+  // scrolls or rubber-bands, only the inner <main> (and other explicit scroll
+  // areas) do. Fixed + top-anchored, with the height set to 100dvh (dynamic
+  // viewport height) rather than inset-0's bottom:0 - dvh tracks the *live*
+  // viewport, so when a mobile browser's toolbar collapses the bottom nav
+  // follows the real screen bottom instead of leaving a gap above it (the
+  // classic iOS "100vh" bar-floating bug). In an installed PWA, where there's
+  // no collapsing toolbar, dvh equals the full screen - same as before. The
+  // column flips to a row on sm+.
   return (
-    <div className="fixed inset-0 flex w-full flex-col overflow-hidden overscroll-none sm:flex-row">
+    <div className="fixed inset-x-0 top-0 flex h-[100dvh] w-full flex-col overflow-hidden overscroll-none sm:flex-row">
       {/* Desktop sidebar - replaced by the bottom nav on mobile. Pinned items
           (Settings) sit at the bottom, as most apps place settings. */}
       <nav className="hidden w-11 flex-col items-center gap-1 border-r border-accent-dim bg-black py-2 sm:flex">

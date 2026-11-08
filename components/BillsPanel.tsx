@@ -427,6 +427,7 @@ export default function BillsPanel({
           <div key={b.id} className="group flex items-center">
             <button
               onClick={() => selectBill(b.id)}
+              data-rail-close
               className={`flex-1 truncate rounded px-2 py-1 text-left text-sm ${
                 selectedId === b.id
                   ? "bg-accent-dim text-accent-bright"
