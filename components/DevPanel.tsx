@@ -127,6 +127,7 @@ const C = ({ children }: { children: ReactNode }) => (
 // --- Patch trail: newest first. Descriptions of pre-#15 PRs are
 // reconstructed from the repo; the recent ones are precise. ---
 const PATCHES: { pr: number; name: string; body: ReactNode }[] = [
+  { pr: 43, name: "Editable reminder control board", body: "Settings → Reminders is now a real control board: add, delete, retime, and enable/disable each Telegram reminder slot from the app — no SSH, no code edit. The schedule moved out of the systemd timer (which is now a dumb 5-min ticker) and into a reminder_slots DB table; send-due-reminders.mjs works out HKT-now each tick and fires any slot that's come due, once per day (a per-slot last_sent is the idempotency key, with a 30-min catch-up window). Times are HKT, server-side, shared across devices. Seeded with the previous 08:30 / 16:00 / 22:00 so nothing changes until you touch it." },
   { pr: 42, name: "Senior-dev sweep (consolidation)", body: "No behaviour change. Standalone scripts now share scripts/lib/ helpers (openDb, sendTelegram, Google token+fetch) instead of each re-implementing them — sync-google-events roughly halves. A shared <Modal> primitive (adopted by the receipt-scan and list-delete modals, more to follow). And ARCHITECTURE.md gets an accurate 'as built' section up top, since the original modules/Drizzle plan was never built." },
   { pr: 41, name: "View-main helper + local-dev docs", body: "A bin/pull-main.sh helper (fetch + show, or --checkout to switch) and an EpiDev chapter on cloning, running, and viewing main locally — for reviewing/learning from VSCode. Doesn't change how Claude Code's session teleport works; it makes pulling main trivial." },
   { pr: 40, name: "EpiSplit range-select", body: "Shift+↑/↓ selects a range down a column (Ctrl to the edge), highlighted; Ctrl/Cmd+D then copies the top of the selection down it (set one tax on the first row, select down, fill). Delete clears a multi-cell selection, Escape clears it. Without a selection, Ctrl+D still fills the whole column." },
@@ -201,7 +202,7 @@ export default function DevPanel() {
             <li><C>+ List</C> to create; hover a list for ✎ rename / ✕ delete (deleting sends its items back to the Inbox).</li>
             <li><C>+ Add</C> an item: title, details, due date, and which list. In details, lines starting with <C>-</C> render as bullets; they collapse behind ▸.</li>
             <li>Tap an item's title to edit it — including moving it to another list via the List dropdown.</li>
-            <li>Open items feed the Telegram digest sent 3×/day (08:30 / 16:00 / 22:00 HKT), grouped by list; due dates are flagged overdue/today.</li>
+            <li>Open items feed the Telegram digest, grouped by list; due dates are flagged overdue/today. The send times are yours to set in Settings → Reminders.</li>
           </UL>
           <PatchLinks prs={[19, 16]} />
         </Item>
@@ -241,7 +242,7 @@ export default function DevPanel() {
         </Item>
 
         <Item title="Settings" id="guide-settings">
-          <P>A sidebar of sections: <strong>Account</strong> (change the app password, any device, no SSH), <strong>Appearance</strong> (text size — per-device), <strong>EpiSplit</strong> (default tax rate), <strong>Reminders</strong> (the three digest times), and <strong>About</strong> (into EpiDev). Pinned as ☰ in the nav.</P>
+          <P>A sidebar of sections: <strong>Account</strong> (change the app password, any device, no SSH), <strong>Appearance</strong> (text size — per-device), <strong>EpiSplit</strong> (default tax rate), <strong>Reminders</strong> (an editable board — add/remove/retime the Telegram digest slots), and <strong>About</strong> (into EpiDev). Pinned as ☰ in the nav.</P>
           <PatchLinks prs={[13, 39]} />
         </Item>
       </Section>
@@ -319,11 +320,12 @@ export default function DevPanel() {
         </Item>
 
         <Item title="Reminders">
-          <P>A timer fires three times a day (08:30 / 16:00 / 22:00 HKT) and sends a Telegram digest of every open to-do, grouped by list — one message per list, so it buzzes several times like a mini-alarm. <C>scripts/send-due-reminders.mjs</C> runs standalone (no Next runtime); test rows never page.</P>
+          <P>A systemd timer ticks every 5 minutes; the <em>schedule</em> lives in the DB (<C>reminder_slots</C>), editable from Settings → Reminders. On each tick <C>scripts/send-due-reminders.mjs</C> (standalone, no Next runtime) works out HKT-now, fires any enabled slot that has come due, and sends a Telegram digest of every open to-do, grouped by list — one message per list, so it buzzes several times like a mini-alarm. Test rows never page.</P>
           <UL>
+            <li><strong>Why a ticker, not cron times:</strong> hard-coded <C>OnCalendar</C> lines can only change by SSH + redeploy. Moving the times into a DB table makes them editable from the phone. Idempotency is a per-slot <C>last_sent</C> (an HKT date); a 30-min window after each slot absorbs a missed tick without double-sending.</li>
             <li><strong>D (Telegram vs D-12):</strong> D-12 says &quot;the app doesn't own alerting&quot; — its real concern was unreliable iOS web-push. Telegram is server-initiated and reliable, so it's kept as a <em>secondary</em> nudge; Google Calendar (.ics) stays the authoritative channel. This partially supersedes D-12.</li>
           </UL>
-          <PatchLinks prs={[18, 37]} />
+          <PatchLinks prs={[43, 37, 18]} />
         </Item>
 
         <Item title="Backups">

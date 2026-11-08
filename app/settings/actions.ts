@@ -1,6 +1,12 @@
 "use server";
 
 import { changeAppPassword } from "@/lib/account";
+import {
+  addReminderSlot,
+  updateReminderSlot,
+  deleteReminderSlot,
+} from "@/lib/reminders";
+import { revalidatePath } from "next/cache";
 
 export async function changePasswordAction(
   formData: FormData
@@ -17,4 +23,27 @@ export async function changePasswordAction(
     return { error: result.error };
   }
   return { success: true };
+}
+
+// Reminder slots - thin "use server" adapters over lib/reminders (the core
+// functions). revalidatePath("/") refreshes the single-page shell so the
+// board re-renders from the DB after a mutation. The time string is
+// validated (and silently ignored if malformed) inside lib/reminders.
+export async function addReminderSlotAction(time: string): Promise<void> {
+  addReminderSlot(time);
+  revalidatePath("/");
+}
+
+export async function updateReminderSlotAction(
+  id: number,
+  time: string,
+  enabled: boolean
+): Promise<void> {
+  updateReminderSlot(id, time, enabled);
+  revalidatePath("/");
+}
+
+export async function deleteReminderSlotAction(id: number): Promise<void> {
+  deleteReminderSlot(id);
+  revalidatePath("/");
 }

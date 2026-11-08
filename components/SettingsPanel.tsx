@@ -1,7 +1,19 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
-import { changePasswordAction } from "@/app/settings/actions";
+import {
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
+import {
+  changePasswordAction,
+  addReminderSlotAction,
+  updateReminderSlotAction,
+  deleteReminderSlotAction,
+} from "@/app/settings/actions";
+import type { ReminderSlot } from "@/lib/reminders";
 import PasswordInput from "@/components/PasswordInput";
 import SideRail from "@/components/SideRail";
 import { getPref, setPref, applyTextSize, TEXT_SIZES } from "@/lib/prefs";
@@ -75,7 +87,117 @@ function AccountSection() {
   );
 }
 
-export default function SettingsPanel() {
+// Editable control board for the Telegram reminder times. The server owns the
+// schedule (reminder_slots table); each row edits one slot. Actions revalidate
+// "/", so after any mutation the page re-renders and hands this component a
+// fresh `slots` prop - adopted via the render-time reconcile below so an
+// optimistic local edit is replaced by the authoritative server state.
+function RemindersSection({ slots }: { slots: ReminderSlot[] }) {
+  const [, startTransition] = useTransition();
+  const [rows, setRows] = useState<ReminderSlot[]>(slots);
+  const [prevSlots, setPrevSlots] = useState<ReminderSlot[]>(slots);
+
+  // Reconcile new server data into local state during render (the canonical
+  // "store previous props" pattern - not an effect, so no extra paint).
+  if (slots !== prevSlots) {
+    setPrevSlots(slots);
+    setRows(slots);
+  }
+
+  function setTimeLocal(id: number, time: string) {
+    setRows((rs) => rs.map((r) => (r.id === id ? { ...r, time } : r)));
+  }
+  function commitTime(id: number, time: string, enabled: boolean) {
+    if (!/^\d{2}:\d{2}$/.test(time)) return; // native picker was cleared
+    startTransition(() => updateReminderSlotAction(id, time, enabled));
+  }
+  function toggle(id: number) {
+    const row = rows.find((r) => r.id === id);
+    if (!row) return;
+    const enabled = !row.enabled;
+    setRows((rs) => rs.map((r) => (r.id === id ? { ...r, enabled } : r)));
+    startTransition(() => updateReminderSlotAction(id, row.time, enabled));
+  }
+  function remove(id: number) {
+    setRows((rs) => rs.filter((r) => r.id !== id));
+    startTransition(() => deleteReminderSlotAction(id));
+  }
+  function add() {
+    startTransition(() => addReminderSlotAction("09:00"));
+  }
+
+  return (
+    <div className="flex max-w-md flex-col gap-3 text-sm text-foreground/75">
+      <p>
+        Telegram sends a digest of your open to-dos, grouped by list — one
+        message per list — at each time below. Add, remove, or retime slots;
+        changes take effect on the next send.
+      </p>
+
+      <div className="flex flex-col gap-2">
+        {rows.length === 0 && (
+          <p className="font-mono text-[11px] text-foreground/40">
+            No reminder times — the digest never sends. Add one below.
+          </p>
+        )}
+        {rows.map((r) => (
+          <div
+            key={r.id}
+            className="flex items-center gap-2 rounded border border-accent-dim bg-black px-3 py-2"
+          >
+            <input
+              type="time"
+              value={r.time}
+              onChange={(e) => setTimeLocal(r.id, e.target.value)}
+              onBlur={(e) => commitTime(r.id, e.target.value, r.enabled)}
+              className={`${inputCls} w-28 ${r.enabled ? "" : "opacity-40"}`}
+            />
+            <span className="font-mono text-[10px] uppercase tracking-wide text-foreground/40">
+              HKT
+            </span>
+            <button
+              onClick={() => toggle(r.id)}
+              className={`ml-auto rounded border px-2 py-1 font-mono text-[11px] ${
+                r.enabled
+                  ? "border-accent bg-accent-dim text-accent-bright"
+                  : "border-accent-dim text-foreground/40 hover:text-foreground"
+              }`}
+            >
+              {r.enabled ? "On" : "Off"}
+            </button>
+            <button
+              onClick={() => remove(r.id)}
+              aria-label="Delete reminder time"
+              className="rounded border border-accent-dim px-2 py-1 font-mono text-[11px] text-foreground/50 hover:border-accent-bright hover:text-accent-bright"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={add}
+        className="w-fit rounded border border-accent-dim px-3 py-1.5 font-mono text-xs text-foreground/70 hover:bg-accent-dim hover:text-accent-bright"
+      >
+        + Add reminder time
+      </button>
+
+      <p className="font-mono text-[10px] text-foreground/40">
+        Times are HKT and server-side (shared by all your devices, not
+        per-device). The VPS checks every 5 minutes and fires any slot that has
+        come due, once per day. Google Calendar remains the authoritative alert
+        channel (D-12); Telegram is the reliable nudge.
+      </p>
+    </div>
+  );
+}
+
+export default function SettingsPanel({
+  reminderSlots,
+}: {
+  reminderSlots: ReminderSlot[];
+}) {
   const [section, setSection] = useState<string>("account");
   const [textSize, setTextSize] = useState("normal");
   const [defaultTax, setDefaultTax] = useState("20");
@@ -168,24 +290,7 @@ export default function SettingsPanel() {
           </div>
         )}
 
-        {section === "reminders" && (
-          <div className="flex max-w-md flex-col gap-2 text-sm text-foreground/75">
-            <p>
-              Telegram sends a digest of your open to-dos, grouped by list —
-              one message per list — <strong>three times a day</strong>:
-            </p>
-            <ul className="ml-4 list-disc font-mono text-xs">
-              <li>08:30 HKT — morning</li>
-              <li>16:00 HKT — afternoon (the window you actually see alerts)</li>
-              <li>22:00 HKT — night wind-down</li>
-            </ul>
-            <p className="font-mono text-[10px] text-foreground/40">
-              Times are server-side (systemd timer on the VPS), not a per-device
-              setting. Google Calendar remains the authoritative alert channel
-              (D-12); Telegram is the reliable nudge.
-            </p>
-          </div>
-        )}
+        {section === "reminders" && <RemindersSection slots={reminderSlots} />}
 
         {section === "about" && (
           <div className="flex max-w-md flex-col gap-2 text-sm text-foreground/75">

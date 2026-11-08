@@ -9,17 +9,22 @@ a task list can't represent.
 
 ## Now — resume here
 
-**Updated:** 2026-11-02 · **By:** VPS Remote Control session
+**Updated:** 2026-11-08 · **By:** Remote Control session
 
-- **State:** prod + UAT healthy. Mobile pipeline live end-to-end (iPhone/PC
-  Claude → VPS `claude-rc` → `feature/*` → UAT → merge → prod). **Nightly
-  encrypted backups live** (bootstrapped 2026-11-02): `epicentre-backup.timer`
-  → age-encrypted → private `EpiCentre-Backup` repo at 18:00 UTC; 14 local
-  plaintext dailies in `~/backups`. Secret age key is in Lucas's password
-  manager only. Backups #17, to-do edit #16, mobile notif #15 all merged.
-- **In flight:** `feature/housekeeping-reminders` — Telegram reminder time
-  09:00→08:00 UTC (16:00 HKT convention); `~/.claude/settings.json` copied to
-  `deploy/claude-settings.json` (guardrails survive a rebuild); this block.
+- **State:** prod + UAT healthy. #18–42 all merged (Lists, Cal+ two-way,
+  EpiSplit + receipt OCR + grid/range-select, split-screen, mobile overhaul,
+  SideRail/Modal/prefs shared, Settings build-out, 3×-daily Telegram digest,
+  senior-dev sweep). Nightly encrypted backups still live.
+- **In flight:** `feature/reminder-control` (#43) — **editable reminder
+  control board.** The reminder schedule moved out of the systemd timer into a
+  new `reminder_slots` DB table (seeded 08:30/16:00/22:00 HKT). Settings →
+  Reminders is now add/delete/retime/enable per slot. The timer became a dumb
+  5-min ticker; `scripts/send-due-reminders.mjs` computes HKT-now each tick and
+  fires any due slot once/day (`last_sent` HKT-date idempotency, 30-min
+  catch-up window). Build + lint green; slot-math unit-checked.
+- **On merge:** the new `send-reminders.timer` (`OnCalendar=*:0/5`) installs on
+  prod deploy — confirm the old 3×-OnCalendar unit is replaced (not left
+  running alongside) with `systemctl --user list-timers | grep reminders`.
 - **Next:** (1) restore test on the PC — prove the age key decrypts a backup;
   (2) loosen deny rules so Claude can read service status/logs; optional
   Termius phone break-glass (PC SSH already works); (3) **needs Lucas's
