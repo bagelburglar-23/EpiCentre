@@ -227,6 +227,7 @@ export default function SettingsPanel({
           <button
             key={s.id}
             onClick={() => setSection(s.id)}
+            data-rail-close
             className={`rounded px-2 py-1 text-left text-sm ${
               section === s.id
                 ? "bg-accent-dim text-accent-bright"

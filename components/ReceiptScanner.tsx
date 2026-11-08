@@ -34,6 +34,25 @@ async function preprocess(file: Blob): Promise<HTMLCanvasElement | Blob> {
   }
 }
 
+// One row of the Upload-receipt popover.
+function ReceiptMenuItem({
+  onClick,
+  children,
+}: {
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      role="menuitem"
+      onClick={onClick}
+      className="px-3 py-2 text-left font-mono text-xs text-foreground/80 hover:bg-accent-dim hover:text-accent-bright"
+    >
+      {children}
+    </button>
+  );
+}
+
 // Receipt photo -> items, entirely in the browser via tesseract.js (no AI
 // tokens, no server). tesseract.js is imported dynamically so its ~couple-MB
 // core + language data load only when you actually scan (first scan fetches
@@ -46,12 +65,34 @@ export default function ReceiptScanner({
   onAdd: (items: ParsedItem[], taxPercent: string) => void;
   defaultTax: string;
 }) {
+  // Two hidden <input type="file">: one with `capture` (jumps straight to the
+  // rear camera on a phone), one without (the OS photo/file picker). The menu
+  // items click whichever one fits.
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [candidates, setCandidates] = useState<ParsedItem[] | null>(null);
   const [picked, setPicked] = useState<Set<number>>(new Set());
   const [batchTax, setBatchTax] = useState(defaultTax);
+  // The "Upload receipt" popover (the small menu of sources).
+  const [menuOpen, setMenuOpen] = useState(false);
+  // Which sources to offer. Phones/tablets add camera + gallery; desktop just
+  // gets file + paste. Detected after mount (navigator isn't available during
+  // SSR, so a render-time read would mismatch hydration). iPadOS 13+ reports a
+  // Mac user-agent, so the touch-point check catches iPads too.
+  const [isTouch, setIsTouch] = useState(false);
+  /* eslint-disable react-hooks/set-state-in-effect -- navigator isn't available
+     during SSR, so this reads the device class once after mount (a render-time
+     read would differ between server and client and cause a hydration error). */
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    setIsTouch(
+      /iPhone|iPad|iPod|Android/i.test(ua) ||
+        (/Mac/.test(ua) && navigator.maxTouchPoints > 1)
+    );
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleFile = useCallback(
     async (file: Blob) => {
@@ -87,8 +128,9 @@ export default function ReceiptScanner({
     [defaultTax]
   );
 
-  // Desktop: paste an image from the clipboard (Cmd/Ctrl+V anywhere, or the
-  // Paste button). Screenshot a receipt and paste it - no file dialog.
+  // Paste an image from the clipboard via the OS paste event (Cmd/Ctrl+V on
+  // desktop; a hardware/soft keyboard paste on mobile). The "Paste" menu item
+  // uses the async Clipboard API below instead. Screenshot a receipt, paste.
   useEffect(() => {
     function onPaste(e: ClipboardEvent) {
       const items = e.clipboardData?.items;
@@ -108,6 +150,8 @@ export default function ReceiptScanner({
     return () => window.removeEventListener("paste", onPaste);
   }, [handleFile]);
 
+  // The "Paste" menu item: read the latest clipboard entry directly (works on
+  // desktop and modern mobile Safari/Chrome) and use its image if it has one.
   async function pasteFromClipboard() {
     try {
       const items = await navigator.clipboard.read();
@@ -147,11 +191,26 @@ export default function ReceiptScanner({
 
   return (
     <>
-      {/* No capture attr -> mobile offers Photo Library *and* Camera. */}
+      {/* Plain picker: OS photo library / Files app (no `capture`, so a phone
+          shows both gallery and camera in its native sheet). */}
       <input
         ref={fileRef}
         type="file"
         accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handleFile(f);
+          e.target.value = "";
+        }}
+      />
+      {/* Camera picker: `capture="environment"` opens the rear camera directly
+          on a phone/tablet (ignored on desktop, which has no camera intent). */}
+      <input
+        ref={cameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0];
@@ -167,23 +226,70 @@ export default function ReceiptScanner({
           Scanning {progress}%
         </button>
       ) : (
-        <>
-          {/* Mobile: gallery or camera via the file picker */}
+        // One button, one label everywhere; the sources differ by device. This
+        // is a "popover menu": the button toggles a small floating list, and a
+        // full-screen transparent backdrop behind it closes it on an outside
+        // tap. Same control in portrait, landscape, and on desktop.
+        <div className="relative inline-block">
           <button
-            onClick={() => fileRef.current?.click()}
-            className="rounded border border-accent-dim px-2 py-1 font-mono text-xs text-foreground/70 hover:bg-accent-dim hover:text-accent-bright sm:hidden"
+            onClick={() => setMenuOpen((o) => !o)}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            className="rounded border border-accent-dim px-2 py-1 font-mono text-xs text-foreground/70 hover:bg-accent-dim hover:text-accent-bright"
           >
-            Scan receipt
+            Upload receipt ▾
           </button>
-          {/* Desktop: paste a copied image (or Cmd/Ctrl+V anywhere) */}
-          <button
-            onClick={pasteFromClipboard}
-            title="Paste a copied receipt image (or press Cmd/Ctrl+V)"
-            className="hidden rounded border border-accent-dim px-2 py-1 font-mono text-xs text-foreground/70 hover:bg-accent-dim hover:text-accent-bright sm:inline-flex"
-          >
-            Paste receipt
-          </button>
-        </>
+          {menuOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setMenuOpen(false)}
+                aria-hidden
+              />
+              <div
+                role="menu"
+                className="absolute left-0 top-full z-20 mt-1 flex w-40 flex-col overflow-hidden rounded border border-accent-dim bg-black shadow-lg"
+              >
+                {isTouch && (
+                  <ReceiptMenuItem
+                    onClick={() => {
+                      setMenuOpen(false);
+                      cameraRef.current?.click();
+                    }}
+                  >
+                    Take photo
+                  </ReceiptMenuItem>
+                )}
+                {isTouch && (
+                  <ReceiptMenuItem
+                    onClick={() => {
+                      setMenuOpen(false);
+                      fileRef.current?.click();
+                    }}
+                  >
+                    Upload photo
+                  </ReceiptMenuItem>
+                )}
+                <ReceiptMenuItem
+                  onClick={() => {
+                    setMenuOpen(false);
+                    fileRef.current?.click();
+                  }}
+                >
+                  Choose file
+                </ReceiptMenuItem>
+                <ReceiptMenuItem
+                  onClick={() => {
+                    setMenuOpen(false);
+                    pasteFromClipboard();
+                  }}
+                >
+                  Paste
+                </ReceiptMenuItem>
+              </div>
+            </>
+          )}
+        </div>
       )}
 
       {candidates && (

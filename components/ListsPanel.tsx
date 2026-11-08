@@ -333,6 +333,7 @@ export default function ListsPanel({
       <button
         key={id ?? "inbox"}
         onClick={() => setSelected(id)}
+        data-rail-close
         className={`flex w-full items-center justify-between gap-2 rounded px-2 py-1 text-left text-sm ${
           active
             ? "bg-accent-dim text-accent-bright"
