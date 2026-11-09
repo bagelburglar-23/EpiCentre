@@ -11,6 +11,7 @@ import {
   createListAction,
   renameListAction,
   deleteListAction,
+  setListRemindersAction,
 } from "@/app/lists/actions";
 import type { Todo } from "@/lib/todos";
 import type { List } from "@/lib/lists";
@@ -327,6 +328,18 @@ export default function ListsPanel({
     });
   }
 
+  function toggleReminders(id: number) {
+    const list = lists.find((l) => l.id === id);
+    if (!list) return;
+    const next = !list.remindersEnabled;
+    setLists((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, remindersEnabled: next } : l))
+    );
+    startTransition(async () => {
+      await setListRemindersAction(id, next);
+    });
+  }
+
   const railItem = (id: number | null, name: string) => {
     const active = selected === id;
     return (
@@ -403,7 +416,23 @@ export default function ListsPanel({
           ) : (
             <div key={l.id} className="group flex items-center">
               {railItem(l.id, l.name)}
-              <div className="ml-0.5 flex shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
+              <div className="ml-0.5 flex shrink-0 items-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
+                <button
+                  onClick={() => toggleReminders(l.id)}
+                  aria-label={`Turn reminders ${l.remindersEnabled ? "off" : "on"} for ${l.name}`}
+                  title={
+                    l.remindersEnabled
+                      ? "Reminders on — tap to mute this list"
+                      : "Reminders muted — tap to turn on"
+                  }
+                  className={`rounded px-1 text-[13px] leading-none ${
+                    l.remindersEnabled
+                      ? "text-accent-bright/80 hover:text-accent-bright"
+                      : "text-foreground/30 hover:text-foreground/70"
+                  }`}
+                >
+                  {l.remindersEnabled ? "🔔" : "🔕"}
+                </button>
                 <button
                   onClick={() => {
                     setRenamingId(l.id);

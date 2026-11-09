@@ -29,6 +29,17 @@ if (!BOT_TOKEN || !CHAT_ID) {
 
 const db = openDb();
 
+// The per-list mute switch (lists.reminders_enabled) is normally added by the
+// Next app's getDb() on first use. This standalone timer can fire before the
+// app has handled a request after a deploy, so ensure the column exists here
+// too - idempotent, same default as the app. Without it the query below would
+// throw on a fresh DB.
+try {
+  db.exec(`ALTER TABLE lists ADD COLUMN reminders_enabled INTEGER NOT NULL DEFAULT 1`);
+} catch {
+  // already exists - fine
+}
+
 // HKT is UTC+8, no DST. Both the current HKT date (the per-day idempotency key)
 // and minute-of-day come from shifting the UTC clock by 8 hours.
 const HKT_OFFSET_MIN = 8 * 60;
@@ -74,13 +85,16 @@ const markAllFired = () => {
 
 // Every open, non-test to-do with its list name (NULL list = "Dump"). Ordered
 // so dated items lead, soonest first. Reminders are a production concern, so
-// is_test rows are excluded.
+// is_test rows are excluded. Muted lists (reminders_enabled = 0) are left out;
+// unfiled items (list_id IS NULL / "Dump") always remind - they have no list
+// row to mute.
 const rows = db
   .prepare(
     `SELECT t.text, t.due_date, t.list_id, l.name AS list_name
        FROM todos t
        LEFT JOIN lists l ON l.id = t.list_id
       WHERE t.done = 0 AND t.is_test = 0
+        AND (t.list_id IS NULL OR l.reminders_enabled = 1)
       ORDER BY (t.due_date IS NULL), t.due_date ASC, t.created_at ASC`
   )
   .all();

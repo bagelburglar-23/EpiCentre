@@ -7,9 +7,11 @@ export type List = {
   id: number;
   name: string;
   isTest: boolean;
+  // When false, this list's open items are left out of the Telegram digest.
+  remindersEnabled: boolean;
 };
 
-type Row = { id: number; name: string; is_test: number };
+type Row = { id: number; name: string; is_test: number; reminders_enabled: number };
 
 // Read at render time - needs connection() for the same reason listTodos
 // does (see lib/todos.ts): without it the query freezes into the static
@@ -19,11 +21,16 @@ export async function listLists(): Promise<List[]> {
   const rows = getDb()
     .prepare(
       isProduction()
-        ? `SELECT id, name, is_test FROM lists WHERE is_test = 0 ORDER BY sort_order ASC, created_at ASC`
-        : `SELECT id, name, is_test FROM lists ORDER BY sort_order ASC, created_at ASC`
+        ? `SELECT id, name, is_test, reminders_enabled FROM lists WHERE is_test = 0 ORDER BY sort_order ASC, created_at ASC`
+        : `SELECT id, name, is_test, reminders_enabled FROM lists ORDER BY sort_order ASC, created_at ASC`
     )
     .all() as Row[];
-  return rows.map((r) => ({ id: r.id, name: r.name, isTest: !!r.is_test }));
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    isTest: !!r.is_test,
+    remindersEnabled: !!r.reminders_enabled,
+  }));
 }
 
 // Mutation cores - plain functions (see ARCHITECTURE.md "mutation core +
@@ -40,6 +47,15 @@ export function createList(name: string, isTest: boolean): void {
     `INSERT INTO lists (name, is_test, sort_order, updated_at)
      VALUES (?, ?, ?, datetime('now'))`
   ).run(n, forcedTest ? 1 : 0, m + 1);
+}
+
+// Mute / unmute a list's reminders (the Telegram digest reads this).
+export function setListReminders(id: number, enabled: boolean): void {
+  getDb()
+    .prepare(
+      `UPDATE lists SET reminders_enabled = ?, updated_at = datetime('now') WHERE id = ?`
+    )
+    .run(enabled ? 1 : 0, id);
 }
 
 export function renameList(id: number, name: string): void {
