@@ -16,7 +16,7 @@ a task list can't represent.
   and letting iOS inset the web view, + a Grab-style home-indicator clearance on
   the nav; needed a PWA reinstall). Nightly encrypted backups still live.
 - **In flight:** `feature/list-reminder-toggle` (#47) — **per-list reminder
-  mute.** Each named list gets a 🔔/🔕 toggle in the EpiList rail; muting drops
+  mute.** Each named list gets a bell toggle in the EpiList rail (accent when on, grey + strikethrough when muted); muting drops
   its open items from the Telegram digest. New `lists.reminders_enabled` column
   (default 1); `send-due-reminders.mjs` skips muted lists (with a defensive
   ALTER in case the timer fires before the app adds the column post-deploy).

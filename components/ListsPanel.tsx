@@ -181,6 +181,30 @@ function EntryModal({
   );
 }
 
+// Minimal bell glyph (inherits currentColor). Muted = a diagonal slash across
+// it. Colour is set by the button: accent when on (red prod / blue UAT / grey
+// when UAT matches prod), dim grey when muted.
+function Bell({ muted }: { muted: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className="block"
+    >
+      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+      {muted && <line x1="3.5" y1="3.5" x2="20.5" y2="20.5" />}
+    </svg>
+  );
+}
+
 export default function ListsPanel({
   initialLists,
   initialTodos,
@@ -425,13 +449,13 @@ export default function ListsPanel({
                       ? "Reminders on — tap to mute this list"
                       : "Reminders muted — tap to turn on"
                   }
-                  className={`rounded px-1 text-[13px] leading-none ${
+                  className={`flex items-center rounded px-1 ${
                     l.remindersEnabled
-                      ? "text-accent-bright/80 hover:text-accent-bright"
-                      : "text-foreground/30 hover:text-foreground/70"
+                      ? "text-accent-bright hover:text-accent"
+                      : "text-foreground/35 hover:text-foreground/70"
                   }`}
                 >
-                  {l.remindersEnabled ? "🔔" : "🔕"}
+                  <Bell muted={!l.remindersEnabled} />
                 </button>
                 <button
                   onClick={() => {
