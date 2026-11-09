@@ -1,7 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createList, renameList, deleteList } from "@/lib/lists";
+import {
+  createList,
+  renameList,
+  deleteList,
+  setListReminders,
+} from "@/lib/lists";
 
 export async function createListAction(name: string, isTest: boolean) {
   createList(name, isTest);
@@ -15,5 +20,10 @@ export async function renameListAction(id: number, name: string) {
 
 export async function deleteListAction(id: number, deleteItems: boolean) {
   deleteList(id, deleteItems);
+  revalidatePath("/");
+}
+
+export async function setListRemindersAction(id: number, enabled: boolean) {
+  setListReminders(id, enabled);
   revalidatePath("/");
 }

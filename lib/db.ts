@@ -77,6 +77,17 @@ export function getDb(): Database.Database {
   } catch (e) {
     if (!(e instanceof Error) || !e.message.includes("duplicate column")) throw e;
   }
+  // Per-list reminder switch. The Telegram digest (scripts/send-due-reminders.mjs)
+  // skips a list whose reminders_enabled = 0, so a noisy list doesn't clog the
+  // channel. Default 1 (on) so existing lists keep reminding until muted.
+  // Additive on the shared DB, like the columns above.
+  try {
+    instance.exec(
+      `ALTER TABLE lists ADD COLUMN reminders_enabled INTEGER NOT NULL DEFAULT 1`
+    );
+  } catch (e) {
+    if (!(e instanceof Error) || !e.message.includes("duplicate column")) throw e;
+  }
 
   // Cal+ base. gcal_event_id/synced_at are forward-looking columns for the
   // not-yet-built Google Calendar sync (see lib/google-calendar.ts) - added

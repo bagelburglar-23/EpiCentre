@@ -9,35 +9,23 @@ a task list can't represent.
 
 ## Now — resume here
 
-**Updated:** 2026-11-08 · **By:** Remote Control session
+**Updated:** 2026-11-09 · **By:** Remote Control session
 
-- **State:** prod + UAT healthy. #18–44 merged (through the mobile UI polish —
-  full-screen rail menu, 100dvh nav, unified Upload-receipt menu). Nightly
-  encrypted backups still live.
-- **In flight:** `feature/epical-sgt` (#45, rebased onto main after #44) —
-  **EpiCal timezone fix.** EpiCal was labelling event times UTC when writing to
-  Google, so entries drifted +8h in GCal (15:00 → 23:00 SGT). Now labels them
-  `Asia/Singapore` (one line, `lib/google-calendar.ts:toGoogleTime`).
-  Display/edit were already correct (floating wall-clock, string-sliced).
-  Events pushed *before* this fix stay shifted until re-saved. Build + lint
-  green.
-- **Also in flight:** `feature/nav-gap-fix` (#46, stacked on #45) — the
-  bottom-nav gap. **Root cause (diagnosed with a temporary on-screen readout,
-  since removed): `env(safe-area-inset-bottom)` = 0 on a home-indicator device
-  → `viewport-fit=cover` was NOT active in the installed PWA.** The app has
-  requested cover since #22, but iOS only reads viewport/status-bar config at
-  *Add to Home Screen*; the installed copy predated cover and cached old config.
-  **Final approach (after several cover-based attempts kept the nav floating):
-  DROPPED viewport-fit=cover entirely** — same as the reference barber app
-  (august.eber.co, plain `width=device-width,initial-scale=1` viewport). iOS
-  then insets the web view inside the safe area, so the in-flow bottom nav lands
-  flush above the home indicator with no safe-area math and no edge clipping.
-  Status bar: `black-translucent` → opaque `black`. **Needs ONE reinstall**
-  (iOS caches viewport-fit at Add-to-Home-Screen). ViewportDebug removed.
-  **Merge order: #45 then #46** (stacked, no conflict). Build + lint green;
-  awaiting on-device confirm.
-- **EpiSplit "Upload receipt" button:** confirmed fixed on device (was just the
-  pre-#44 branch). No action.
+- **State:** prod + UAT healthy. #18–46 merged — including EpiCal Singapore-time
+  fix (#45) and the bottom-nav saga (#46, resolved by DROPPING viewport-fit=cover
+  and letting iOS inset the web view, + a Grab-style home-indicator clearance on
+  the nav; needed a PWA reinstall). Nightly encrypted backups still live.
+- **In flight:** `feature/list-reminder-toggle` (#47) — **per-list reminder
+  mute.** Each named list gets a bell toggle in the EpiList rail (accent when on, grey + strikethrough when muted); muting drops
+  its open items from the Telegram digest. New `lists.reminders_enabled` column
+  (default 1); `send-due-reminders.mjs` skips muted lists (with a defensive
+  ALTER in case the timer fires before the app adds the column post-deploy).
+  **The Dump (unfiled, list_id NULL) has no row to mute → always reminds**;
+  flagged to Lucas as a possible follow-up. Build + lint green; query
+  unit-checked.
+- **iOS PWA note (hard-won):** the app deliberately does NOT use
+  `viewport-fit=cover` (status bar `black`). Don't reintroduce cover — it caused
+  the nav-float gap. Documented in `app/layout.tsx` + EpiDev #46.
 - **Next:** (1) restore test on the PC — prove the age key decrypts a backup;
   (2) loosen deny rules so Claude can read service status/logs; optional
   Termius phone break-glass (PC SSH already works); (3) **needs Lucas's
