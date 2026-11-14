@@ -2,7 +2,7 @@
 /* eslint-disable react/no-unescaped-entities -- this is a prose-heavy doc
    component; raw apostrophes in copy are intentional and readable. */
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { consumePendingSection } from "@/lib/nav-bus";
 
 // EpiDev - the living developer tab. Three sections (Frontend guide,
@@ -127,7 +127,7 @@ const C = ({ children }: { children: ReactNode }) => (
 // --- Patch trail: newest first. Descriptions of pre-#15 PRs are
 // reconstructed from the repo; the recent ones are precise. ---
 const PATCHES: { pr: number; name: string; body: ReactNode }[] = [
-  { pr: 48, name: "EpiDev Roadmap section (resume-from-absence view)", body: "A new Roadmap section at the top of EpiDev, so you can plug back into the workflow after time away without digging. Four parts: 'You are here' (what's merged, what's in flight), 'Up next' (my suggested build order with rough effort), 'Considering' (the full menu grouped by module), and 'Needs your call' (decisions blocking things). Every item cross-links the related patch #s, so 'what we've done' and 'what we're considering' sit side by side. It's the curated near-term view; the exhaustive dated archive stays in BACKLOG.md, the phase discipline in ROADMAP.md. Keep it short — prune shipped/dead items." },
+  { pr: 48, name: "EpiDev Roadmap section (resume-from-absence view)", body: "A new Roadmap section at the top of EpiDev, so you can plug back into the workflow after time away without digging. Four parts: 'You are here' (what's merged, what's in flight), 'Up next' (my suggested build order with rough effort), 'Considering' (the full menu grouped by module), and 'Needs your call' (decisions blocking things). Every item cross-links the related patch #s, so 'what we've done' and 'what we're considering' sit side by side. And every buildable item has a copy-prompt button (a Claude spark on the copy glyph): tap it, paste into a chat with Claude, and it kicks off that item with the right context — read → tap → paste → go. The prompts are generated from each item's own fields (title, goal, related #s) plus shared boilerplate, so they stay in sync as the roadmap changes. It's the curated near-term view; the exhaustive dated archive stays in BACKLOG.md, the phase discipline in ROADMAP.md. Keep it short — prune shipped/dead items." },
   { pr: 47, name: "Per-list reminder toggle (mute noisy lists)", body: "Each named list in EpiList now has a small bell toggle in its rail controls (always visible on mobile, on hover on desktop): accent-coloured when on (red prod / blue UAT / grey when UAT matches prod), dim grey with a strikethrough when muted. Mute a list and its open items drop out of the Telegram digest — so a chatty list stops clogging the channel. Backed by a lists.reminders_enabled column (default on, so nothing changes until you mute something); the digest script skips muted lists. Unfiled items (the Dump) have no list row to mute, so they always remind — tell me if you want that toggleable too." },
   { pr: 46, name: "Bottom nav sits flush (dropped viewport-fit=cover)", body: "The black strip under the bottom nav came from fighting iOS over the edge-to-edge (viewport-fit=cover) model — the nav kept floating above the home indicator across several attempts. Fix: do what the reference app does and DON'T use cover. iOS then lays the web view inside the safe area (below the status bar, above the home indicator), so the normal in-flow bottom nav lands flush above the gesture line on its own, with no safe-area math and no edge clipping. Status bar switched from black-translucent to an opaque black bar that sits above the web view. Because iOS caches viewport-fit at Add-to-Home-Screen, this needs ONE reinstall (remove the app from the home screen, re-add it) to take effect. The nav keeps a small fixed clearance below its labels (max(env(safe-area-inset-bottom), 1.5rem)) so the home-indicator gesture line doesn't sit over them — Grab-style." },
   { pr: 45, name: "EpiCal times are Singapore time", body: "EpiCal was handing event times to Google labelled as UTC, so a 15:00 event you created or edited landed at 23:00 in Google Calendar (which reads your calendar as Singapore time) — the +8h drift. Fixed: EpiCal now names the zone as Asia/Singapore (UTC+8) when writing to Google, so the hours you type are the hours Google stores. One line, in lib/google-calendar.ts; display was already correct (it reads the clock digits straight off the stored string). Note: events pushed before this fix stay shifted in Google until you re-save them (an edit re-pushes with the right zone)." },
@@ -201,6 +201,100 @@ function Refs({ prs }: { prs?: number[] }) {
         <PatchLink key={p} pr={p} />
       ))}
     </>
+  );
+}
+
+// Compose a thin, fresh-conversation-safe starter prompt from an item's own
+// fields. Most of it is boilerplate (one PR off main, patch note, build/lint,
+// UAT, the repo's constraints) so keeping prompts in sync with reality costs
+// almost nothing - the only per-item parts are the title, the goal, and the
+// related patch #s, which already live on the item. `kick` is an optional
+// extra line for the rare item that needs custom context.
+function buildPrompt(o: {
+  title: string;
+  area?: string;
+  why?: string;
+  prs?: number[];
+  kick?: string;
+}): string {
+  return [
+    `Let's build: ${o.title} (EpiDev → Roadmap${o.area ? `, ${o.area}` : ""}).`,
+    o.why && `Goal: ${o.why}.`,
+    o.kick,
+    "Ship it as one PR off the latest main with its own EpiDev patch note; follow the module contract in ARCHITECTURE.md and the constraints in CLAUDE.md. Build + lint before pushing, then I'll review on UAT.",
+    o.prs?.length && `Prior work: ${o.prs.map((p) => `#${p}`).join(", ")}.`,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // Fallback for contexts where the async Clipboard API is blocked.
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      ta.remove();
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
+
+// "Copy a starter prompt" glyph: the standard two-sheet copy symbol with a
+// small Claude-style spark on the front sheet. Monochrome, inherits
+// currentColor - matches the bell / ✎ / ✕ line icons.
+function PromptIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="15"
+      height="15"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className="block"
+    >
+      <rect x="8" y="8" width="13" height="13" rx="2" />
+      <path d="M5 16H4.5A1.5 1.5 0 0 1 3 14.5V4.5A1.5 1.5 0 0 1 4.5 3h10A1.5 1.5 0 0 1 16 4.5V5" />
+      <path d="M14.5 11.3v6.4M11.3 14.5h6.4" strokeWidth={1.5} />
+      <path d="M12.5 12.5l4 4M16.5 12.5l-4 4" strokeWidth={1} />
+    </svg>
+  );
+}
+
+// The per-item button: taps copy the composed prompt; paste it to Claude to
+// start that item.
+function CopyPromptButton({ text, label }: { text: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={async () => {
+        if (await copyText(text)) {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1400);
+        }
+      }}
+      title="Copy a starter prompt — paste it to Claude to begin this item"
+      aria-label={`Copy starter prompt for ${label}`}
+      className="ml-1 inline-flex items-center gap-0.5 rounded px-0.5 align-text-bottom text-accent-bright/80 hover:text-accent-bright"
+    >
+      <PromptIcon />
+      {copied && (
+        <span className="font-mono text-[10px] text-foreground/50">copied</span>
+      )}
+    </button>
   );
 }
 
@@ -300,6 +394,13 @@ export default function DevPanel() {
           repo. This list stays short and curated — it's the resume-from-absence
           view.
         </P>
+        <P>
+          Each buildable item has a{" "}
+          <span className="text-accent-bright">copy-prompt</span> button — tap
+          it, paste into a chat with Claude, and it starts that item with the
+          right context (one PR, patch note, the repo's constraints). Read → tap
+          → paste → go.
+        </P>
 
         <Item title="Up next — my suggested order">
           <P>
@@ -310,6 +411,10 @@ export default function DevPanel() {
             {UP_NEXT.map((it) => (
               <li key={it.title}>
                 <span className="text-foreground">{it.title}</span>
+                <CopyPromptButton
+                  text={buildPrompt({ title: it.title, why: it.why, prs: it.prs })}
+                  label={it.title}
+                />
                 <Eff e={it.effort} />
                 <Refs prs={it.prs} />
                 <span className="text-foreground/50"> — {it.why}</span>
@@ -329,6 +434,14 @@ export default function DevPanel() {
                 {group.items.map((it) => (
                   <li key={it.title}>
                     <span className="text-foreground/85">{it.title}</span>
+                    <CopyPromptButton
+                      text={buildPrompt({
+                        title: it.title,
+                        area: group.area,
+                        prs: it.prs,
+                      })}
+                      label={it.title}
+                    />
                     <Eff e={it.effort} />
                     <Refs prs={it.prs} />
                   </li>
