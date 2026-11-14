@@ -2,7 +2,7 @@
 /* eslint-disable react/no-unescaped-entities -- this is a prose-heavy doc
    component; raw apostrophes in copy are intentional and readable. */
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { consumePendingSection } from "@/lib/nav-bus";
 
 // EpiDev - the living developer tab. Three sections (Frontend guide,
@@ -127,6 +127,7 @@ const C = ({ children }: { children: ReactNode }) => (
 // --- Patch trail: newest first. Descriptions of pre-#15 PRs are
 // reconstructed from the repo; the recent ones are precise. ---
 const PATCHES: { pr: number; name: string; body: ReactNode }[] = [
+  { pr: 48, name: "EpiDev Roadmap section (resume-from-absence view)", body: "A new Roadmap section at the top of EpiDev, so you can plug back into the workflow after time away without digging. Four parts: 'You are here' (what's merged, what's in flight), 'Up next' (my suggested build order with rough effort), 'Considering' (the full menu grouped by module), and 'Needs your call' (decisions blocking things). Every item cross-links the related patch #s, so 'what we've done' and 'what we're considering' sit side by side. And every buildable item has a copy-prompt button — a 'P' in its own fixed right-hand column, so the tap target is always in the same place: tap it, paste into a chat with Claude, and it kicks off that item with the right context — read → tap → paste → go. The prompts are generated from each item's own fields (title, goal, related #s) plus shared boilerplate, so they stay in sync as the roadmap changes. It's the curated near-term view; the exhaustive dated archive stays in BACKLOG.md, the phase discipline in ROADMAP.md. Keep it short — prune shipped/dead items." },
   { pr: 47, name: "Per-list reminder toggle (mute noisy lists)", body: "Each named list in EpiList now has a small bell toggle in its rail controls (always visible on mobile, on hover on desktop): accent-coloured when on (red prod / blue UAT / grey when UAT matches prod), dim grey with a strikethrough when muted. Mute a list and its open items drop out of the Telegram digest — so a chatty list stops clogging the channel. Backed by a lists.reminders_enabled column (default on, so nothing changes until you mute something); the digest script skips muted lists. Unfiled items (the Dump) have no list row to mute, so they always remind — tell me if you want that toggleable too." },
   { pr: 46, name: "Bottom nav sits flush (dropped viewport-fit=cover)", body: "The black strip under the bottom nav came from fighting iOS over the edge-to-edge (viewport-fit=cover) model — the nav kept floating above the home indicator across several attempts. Fix: do what the reference app does and DON'T use cover. iOS then lays the web view inside the safe area (below the status bar, above the home indicator), so the normal in-flow bottom nav lands flush above the gesture line on its own, with no safe-area math and no edge clipping. Status bar switched from black-translucent to an opaque black bar that sits above the web view. Because iOS caches viewport-fit at Add-to-Home-Screen, this needs ONE reinstall (remove the app from the home screen, re-add it) to take effect. The nav keeps a small fixed clearance below its labels (max(env(safe-area-inset-bottom), 1.5rem)) so the home-indicator gesture line doesn't sit over them — Grab-style." },
   { pr: 45, name: "EpiCal times are Singapore time", body: "EpiCal was handing event times to Google labelled as UTC, so a 15:00 event you created or edited landed at 23:00 in Google Calendar (which reads your calendar as Singapore time) — the +8h drift. Fixed: EpiCal now names the zone as Asia/Singapore (UTC+8) when writing to Google, so the hours you type are the hours Google stores. One line, in lib/google-calendar.ts; display was already correct (it reads the clock digits straight off the stored string). Note: events pushed before this fix stay shifted in Google until you re-save them (an edit re-pushes with the right zone)." },
@@ -175,6 +176,165 @@ const PATCHES: { pr: number; name: string; body: ReactNode }[] = [
   { pr: 1, name: "Review pipeline", body: "The review-gated deploy pipeline: push a feature branch → UAT; merge to main → prod. The spine everything else ships through." },
 ];
 
+// --- Roadmap: the curated near-term view. "Done" is the patch trail below
+// (every item links its related #PRs); the full dated archive is BACKLOG.md in
+// the repo. Keep this short and live - prune shipped/dead items so it stays the
+// "what now" at a glance. ---
+type Effort = "S" | "M" | "L";
+const EFFORT: Record<Effort, string> = { S: "S · <1h", M: "M · 1–3h", L: "L · 4h+" };
+function Eff({ e }: { e: Effort }) {
+  return (
+    <span
+      title="rough effort"
+      className="ml-1 rounded bg-accent-dim/60 px-1 font-mono text-[10px] text-foreground/50"
+    >
+      {EFFORT[e]}
+    </span>
+  );
+}
+// Inline patch chips (no "patches:" label), for use mid-line.
+function Refs({ prs }: { prs?: number[] }) {
+  if (!prs?.length) return null;
+  return (
+    <>
+      {prs.map((p) => (
+        <PatchLink key={p} pr={p} />
+      ))}
+    </>
+  );
+}
+
+// Compose a thin, fresh-conversation-safe starter prompt from an item's own
+// fields. Most of it is boilerplate (one PR off main, patch note, build/lint,
+// UAT, the repo's constraints) so keeping prompts in sync with reality costs
+// almost nothing - the only per-item parts are the title, the goal, and the
+// related patch #s, which already live on the item. `kick` is an optional
+// extra line for the rare item that needs custom context.
+function buildPrompt(o: {
+  title: string;
+  area?: string;
+  why?: string;
+  prs?: number[];
+  kick?: string;
+}): string {
+  return [
+    `Let's build: ${o.title} (EpiDev → Roadmap${o.area ? `, ${o.area}` : ""}).`,
+    o.why && `Goal: ${o.why}.`,
+    o.kick,
+    "Ship it as one PR off the latest main with its own EpiDev patch note; follow the module contract in ARCHITECTURE.md and the constraints in CLAUDE.md. Build + lint before pushing, then I'll review on UAT.",
+    o.prs?.length && `Prior work: ${o.prs.map((p) => `#${p}`).join(", ")}.`,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // Fallback for contexts where the async Clipboard API is blocked.
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      ta.remove();
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
+
+// The per-item button: a bigger, fixed "P" (for Prompt) tap target that lives
+// in its own right-hand column so it's always in the same place. Tapping copies
+// the composed prompt; paste it to Claude to start that item. Shows a ✓ briefly
+// on copy.
+function CopyPromptButton({ text, label }: { text: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={async () => {
+        if (await copyText(text)) {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1400);
+        }
+      }}
+      title="Copy a starter prompt — paste it to Claude to begin this item"
+      aria-label={`Copy starter prompt for ${label}`}
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-accent-dim font-mono text-sm font-semibold text-accent-bright hover:bg-accent-dim"
+    >
+      {copied ? "✓" : "P"}
+    </button>
+  );
+}
+
+const UP_NEXT: { title: string; why: string; effort: Effort; prs?: number[] }[] = [
+  { title: "EpiSplit “Settle up” + copy summary", why: "splitting's whole point is telling people what they owe — today only the OWED total shows", effort: "M", prs: [24, 32] },
+  { title: "EpiCal per-calendar show/hide + colours", why: "22 Google calendars sync in; the grid is noisy without filters", effort: "M", prs: [14] },
+  { title: "Tailnet-only SSH + disable root/password login", why: "root password login still works on the public IP — the security one that actually matters", effort: "M" },
+  { title: "Backup health in Settings", why: "surface last-backup time so you're not trusting the nightly cron blind", effort: "S", prs: [17] },
+];
+
+const CONSIDERING: { area: string; items: { title: string; effort: Effort; prs?: number[] }[] }[] = [
+  {
+    area: "EpiList",
+    items: [
+      { title: "Recurring to-dos (weekly/monthly)", effort: "M" },
+      { title: "Swipe to complete / delete on mobile", effort: "M" },
+      { title: "“Copy list as text” → dev-wishlist capture flow", effort: "S" },
+      { title: "Make the Dump's reminders toggleable too", effort: "S", prs: [47] },
+    ],
+  },
+  {
+    area: "EpiCal",
+    items: [
+      { title: "Agenda / “next up” list view", effort: "M" },
+      { title: "Recurring events (RRULE)", effort: "L" },
+      { title: "Multi-day event bars across the grid", effort: "M" },
+      { title: "Drag-to-move & resize events", effort: "M", prs: [14] },
+      { title: "In-app event search · year view", effort: "M" },
+    ],
+  },
+  {
+    area: "EpiSplit",
+    items: [{ title: "Saved people (frequent participants)", effort: "M", prs: [24] }],
+  },
+  {
+    area: "Reminders",
+    items: [
+      { title: "Fold today's EpiCal events into the digest", effort: "M", prs: [43, 47] },
+      { title: "Inline “✓ done” buttons in Telegram", effort: "L", prs: [37] },
+    ],
+  },
+  {
+    area: "Infra / security",
+    items: [
+      { title: "Separate Linux user for the Claude session", effort: "L" },
+      { title: "node-direct systemd start (kills control-group warnings)", effort: "S" },
+      { title: "OAuth redirect hostname → env var", effort: "S" },
+    ],
+  },
+  {
+    area: "Housekeeping",
+    items: [
+      { title: "Export-all-data (JSON) button", effort: "M" },
+      { title: "Reconcile ROADMAP with what's built + log the open D-entries", effort: "S" },
+    ],
+  },
+];
+
+const DECISIONS: string[] = [
+  "Dev wishlist: is EpiList a capture-inbox (survivors → BACKLOG.md) or the source of truth? And is agent-autonomy worth building, or is paste-forever fine?",
+  "Dump reminders — make toggleable, or leave always-on?",
+  "Phase A as written (ledger) vs what got built (Lists / Cal / Split) — update ROADMAP.md?",
+  "D-entries still unlogged: the shared prod/UAT DB, the OAuth API routes, Telegram vs D-12.",
+  "EpiTrader / EpiPlanner — build out (personal-only, D-08) or drop the placeholders?",
+];
+
 export default function DevPanel() {
   // When opened via a module's "?", scroll to that module's guide section.
   // Runs on mount because the Shell mounts this panel fresh each time EpiDev
@@ -192,10 +352,107 @@ export default function DevPanel() {
         EpiDev
       </h1>
       <p className="mb-4 text-sm text-foreground/60">
-        How the app works and how it was built. Three living sections — the
-        guide and infrastructure describe the current app; the patch trail is
-        the history they link to. Updated as development continues.
+        How the app works and how it was built. Four living sections — the
+        roadmap is where we are and what's next; the guide and infrastructure
+        describe the current app; the patch trail is the history they all link
+        to. Updated as development continues.
       </p>
+
+      {/* ============ 0. ROADMAP ============ */}
+      <Section title="Roadmap" subtitle="where we are, what's next — start here" open>
+        <P>
+          <strong>You are here:</strong> merged through <PatchLink pr={47} />,
+          nothing in flight — the next move is picking what to build. “Done” is
+          the <strong>Patch notes</strong> section below (every item here links
+          its related #PRs); the full dated archive is <C>BACKLOG.md</C> in the
+          repo. This list stays short and curated — it's the resume-from-absence
+          view.
+        </P>
+        <P>
+          Each buildable item has a{" "}
+          <span className="text-accent-bright">copy-prompt</span> button — tap
+          it, paste into a chat with Claude, and it starts that item with the
+          right context (one PR, patch note, the repo's constraints). Read → tap
+          → paste → go.
+        </P>
+
+        <Item title="Up next — my suggested order">
+          <P>
+            What I'd ship first, highest everyday payoff per hour. Re-weight
+            freely — you know which pain is loudest.
+          </P>
+          <UL>
+            {UP_NEXT.map((it) => (
+              <li key={it.title}>
+                <div className="flex items-start gap-2">
+                  <div className="min-w-0 flex-1">
+                    <span className="text-foreground">{it.title}</span>
+                    <Eff e={it.effort} />
+                    <Refs prs={it.prs} />
+                    <span className="text-foreground/50"> — {it.why}</span>
+                  </div>
+                  <CopyPromptButton
+                    text={buildPrompt({ title: it.title, why: it.why, prs: it.prs })}
+                    label={it.title}
+                  />
+                </div>
+              </li>
+            ))}
+          </UL>
+        </Item>
+
+        <Item title="Considering — the menu, by area">
+          <P>Everything on the table. Effort is rough: {EFFORT.S} / {EFFORT.M} / {EFFORT.L}.</P>
+          {CONSIDERING.map((group) => (
+            <div key={group.area} className="mt-2">
+              <div className="font-mono text-xs uppercase tracking-wide text-accent-bright">
+                {group.area}
+              </div>
+              <UL>
+                {group.items.map((it) => (
+                  <li key={it.title}>
+                    <div className="flex items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <span className="text-foreground/85">{it.title}</span>
+                        <Eff e={it.effort} />
+                        <Refs prs={it.prs} />
+                      </div>
+                      <CopyPromptButton
+                        text={buildPrompt({
+                          title: it.title,
+                          area: group.area,
+                          prs: it.prs,
+                        })}
+                        label={it.title}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </UL>
+            </div>
+          ))}
+        </Item>
+
+        <Item title="Needs your call — decisions blocking things">
+          <UL>
+            {DECISIONS.map((d) => (
+              <li key={d}>{d}</li>
+            ))}
+          </UL>
+        </Item>
+
+        <Item title="Parked / Phase B+">
+          <P>
+            The deep, dated archive lives in <C>BACKLOG.md</C>: candidate modules
+            (meal-prep, Thai, guitar, 3D-printing — one at a time), the D-16
+            agent surface, Litestream, and more. The discipline is in{" "}
+            <C>ROADMAP.md</C>: one module at a time, then live with it a month
+            before the next. Most backlog items are meant to die there — that's
+            the point.
+          </P>
+          <PatchLinks prs={[25]} />
+        </Item>
+      </Section>
 
       {/* ============ 1. FRONTEND GUIDE ============ */}
       <Section title="Frontend guide" subtitle="each module, and how to use it" open>
